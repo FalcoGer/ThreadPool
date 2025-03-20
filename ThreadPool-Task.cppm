@@ -1,6 +1,4 @@
-#pragma once
-
-#include "ITask.hpp"
+module;
 
 #include <any>
 #include <concepts>
@@ -10,7 +8,11 @@
 #include <type_traits>
 #include <utility>
 
-namespace ThreadPool::InternalDetail
+export module ThreadPool:Task;
+
+import :ITask;
+
+export namespace ThreadPool::InternalDetail
 {
     template <typename ReturnType, typename PromiseType, typename... ArgTypes>
         requires (

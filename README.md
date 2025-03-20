@@ -29,7 +29,7 @@ auto future2 = tp.enqueue(increment, 42); // queues task for execution
 
 // blocks execution until futures are ready
 bool result = std::any_cast<bool>(future.get());
-int result2 = std:.any_cast<int>(future2.get());
+int result2 = std::any_cast<int>(future2.get());
 
 // use the results
 std::println("Value was {}", result ? "even" : "odd");

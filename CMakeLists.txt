@@ -3,5 +3,8 @@ project(ThreadPool VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 26)
 
-add_executable(ThreadPool main.cpp ThreadPool.cpp)
+add_library(ThreadPool ThreadPool.cpp)
+
+add_executable(ThreadPoolExample main.cpp)
+target_link_libraries(ThreadPoolExample ThreadPool)
 

@@ -12,9 +12,9 @@ ThreadPool::ThreadPool(std::size_t numThreads)
         m_threads.emplace_back(
           [this](const std::stop_token& stop)
           {
-              std::unique_ptr<ITask> task;
               while (!stop.stop_requested())
               {
+                  std::unique_ptr<ITask> task; // fetched task gets destructed after the while loop
                   {
                       std::unique_lock<std::mutex> lock(m_queueMutex);
                       m_cvTaskReady.wait(lock, [this, &stop] { return !m_taskQueue.empty() || stop.stop_requested(); });
@@ -26,7 +26,6 @@ ThreadPool::ThreadPool(std::size_t numThreads)
                       m_taskQueue.pop();
                   }
                   task->run();
-                  task = nullptr; // free memory without waiting for next task.
               }
           }
         );

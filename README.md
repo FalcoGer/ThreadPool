@@ -10,3 +10,14 @@ See main.cpp for examples.
 3. The callable is put into the task queue. Call `.get()` on the future to block until the thread is done. If `PromiseType` is `std::any`, use `std::any_cast<T>` to cast back to your expected type. If `PromiseType` is void, `.get()` will only block and not return a value. Otherwise the value will be returned. Exceptions are forwarded to the `std::future` as well and will be rethrown when `.get()` is called.
 
 If you need cooperative cancelation, this is outside the scope of ThreadPool. Pass an `std::stop_token` from an `std::stop_source` into your callable and manage it yourself, or use something else.
+
+### Types
+
+| `PromiseType` | `ReturnType`  | Future Holds                            |
+|---------------|---------------|-----------------------------------------|
+| `std::any`    | `void`        | Empty `std::any{}`                      |
+| `std::any`    | Not `void`    | `std::any` with value of return         |
+| `void`        | `void`        | Nothing                                 |
+| `void`        | Not `void`    | Nothing, return value discarded         |
+| Other type    | `void`        | **Compiler error**                      |
+| Other type    | Not `void`    | Return value cast to `PromiseType`      |

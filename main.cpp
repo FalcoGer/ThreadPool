@@ -16,7 +16,7 @@ auto main() -> int
 
     auto l3 = [](int& ref) { ref++; };
     int x = 2;
-    auto future3 = tp.enqueue(l3, std::ref(x));
+    auto future3 = tp.enqueue(l3, x);
 
     std::println("{}", std::any_cast<int>(future2.get()));
     future3.get(); // block until done

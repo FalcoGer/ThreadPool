@@ -20,9 +20,9 @@ class ThreadPool
     [[nodiscard]]
     auto enqueue(CallableType&& callable, ArgTypes&&... args) -> std::future<std::any>
     {
-        auto task = std::make_unique<Task<std::invoke_result_t<CallableType, ArgTypes...>, ArgTypes...>>(
-          std::forward<CallableType>(callable), std::forward<ArgTypes>(args)...
-        );
+        using ReturnType = std::invoke_result_t<CallableType, ArgTypes...>;
+        auto task        = std::make_unique<
+                 Task<ReturnType, ArgTypes...>>(std::forward<CallableType>(callable), std::forward<ArgTypes>(args)...);
         return enqueue(std::move(task));
     }
 

@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 
+namespace ThreadPool
+{
 template <typename PromiseType = std::any>
 class ThreadPool
 {
@@ -26,7 +28,8 @@ class ThreadPool
               {
                   while (!stop.stop_requested())
                   {
-                      std::unique_ptr<ITask<PromiseType>> task;    // fetched task gets destructed after the while loop
+                      std::unique_ptr<InternalDetail::ITask<PromiseType>>
+                        task;    // fetched task gets destructed after the while loop
                       {
                           std::unique_lock<std::mutex> lock(m_queueMutex);
                           m_cvTaskReady
@@ -64,12 +67,19 @@ class ThreadPool
     auto enqueue(CallableType&& callable, ArgTypes&&... args) -> std::future<PromiseType>
     {
         using ReturnType = std::invoke_result_t<CallableType, ArgTypes...>;
-        auto task        = std::make_unique<
-                 Task<ReturnType, PromiseType, ArgTypes...>>(std::forward<CallableType>(callable), std::forward<ArgTypes>(args)...);
+        auto task        = std::make_unique<InternalDetail::Task<ReturnType, PromiseType, ArgTypes...>>(
+          std::forward<CallableType>(callable), std::forward<ArgTypes>(args)...
+        );
         return enqueue(std::move(task));
     }
 
-    auto enqueue(std::unique_ptr<ITask<PromiseType>>&& task) -> std::future<PromiseType>
+    ThreadPool(const ThreadPool&)                     = delete;
+    auto operator= (const ThreadPool&) -> ThreadPool& = delete;
+    ThreadPool(ThreadPool&&)                          = delete;
+    auto operator= (ThreadPool&&) -> ThreadPool&      = delete;
+
+  private:
+    auto enqueue(std::unique_ptr<InternalDetail::ITask<PromiseType>>&& task) -> std::future<PromiseType>
     {
         auto future = task->getFuture();
 
@@ -81,14 +91,9 @@ class ThreadPool
         return future;
     }
 
-    ThreadPool(const ThreadPool&)                     = delete;
-    auto operator= (const ThreadPool&) -> ThreadPool& = delete;
-    ThreadPool(ThreadPool&&)                          = delete;
-    auto operator= (ThreadPool&&) -> ThreadPool&      = delete;
-
-  private:
-    std::queue<std::unique_ptr<ITask<PromiseType>>> m_taskQueue;
-    std::vector<std::jthread>                       m_threads;
-    std::mutex                                      m_queueMutex;
-    std::condition_variable                         m_cvTaskReady;
+    std::queue<std::unique_ptr<InternalDetail::ITask<PromiseType>>> m_taskQueue;
+    std::vector<std::jthread>                                       m_threads;
+    std::mutex                                                      m_queueMutex;
+    std::condition_variable                                         m_cvTaskReady;
 };
+}    // namespace ThreadPool

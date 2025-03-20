@@ -5,6 +5,8 @@ A c++ ThreadPool implementation that allows tasks to return any data type they w
 ### Usage
 See main.cpp for examples.
 
-Calling `ThreadPool::enqueue(Callable, Arguments...)` returns an std::future<std::any>.
-Call `.get()` on the future to lock until the thread is done, and use `std::any_cast<T>` to cast back to your expected type.
-Exceptions are forwarded to the `std::future` as well.
+1. Create a `ThreadPool`. You can pass a template argument for `PromiseType`. If none is provided, `std::any` is used by default. If the type is `void` all return values for the callables are discarded. If the type is not `std::any` or `void`, then all returns are cast to `PromiseType`, so make sure that that is possible. If the type is not `std::any` or `void` then the callable **must** return a value.
+2. Call `ThreadPool::enqueue(Callable, Arguments...)`. This returns an `std::future<PromiseType>`.
+3. The callable is put into the task queue. Call `.get()` on the future to block until the thread is done. If `PromiseType` is `std::any`, use `std::any_cast<T>` to cast back to your expected type. If `PromiseType` is void, `.get()` will only block and not return a value. Otherwise the value will be returned. Exceptions are forwarded to the `std::future` as well and will be rethrown when `.get()` is called.
+
+If you need cooperative cancelation, this is outside the scope of ThreadPool. Pass an `std::stop_token` from an `std::stop_source` into your callable and manage it yourself, or use something else.

@@ -2,12 +2,14 @@
 
 #include <future>
 
+namespace ThreadPool::InternalDetail
+{
 template <typename PromiseType>
 class ITask
 {
   private:
-    bool                                    m_isStarted = false;
-    std::promise<PromiseType>                  m_promise;
+    bool                      m_isStarted = false;
+    std::promise<PromiseType> m_promise;
 
   protected:
     void setStarted() noexcept { m_isStarted = true; }
@@ -40,3 +42,4 @@ class ITask
         return m_promise.get_future();
     }
 };
+}    // namespace ThreadPool::InternalDetail

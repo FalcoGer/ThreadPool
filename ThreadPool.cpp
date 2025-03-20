@@ -35,9 +35,12 @@ ThreadPool::ThreadPool(std::size_t numThreads)
 
 ThreadPool::~ThreadPool()
 {
-    for (auto& thread : m_threads)
     {
-        thread.request_stop();
+        const std::lock_guard<std::mutex> LOCK(m_queueMutex);
+        for (auto& thread : m_threads)
+        {
+            thread.request_stop();
+        }
     }
     m_cvTaskReady.notify_all();
     // jthreads join automatically on destruction

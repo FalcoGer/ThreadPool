@@ -1,18 +1,18 @@
 #pragma once
 
-#include <any>
 #include <future>
 
+template <typename PromiseType>
 class ITask
 {
   private:
     bool                                    m_isStarted = false;
-    std::promise<std::any>                  m_promise;
+    std::promise<PromiseType>                  m_promise;
 
   protected:
     void setStarted() noexcept { m_isStarted = true; }
     [[nodiscard]]
-    auto getPromise() noexcept -> std::promise<std::any>&
+    auto getPromise() noexcept -> std::promise<PromiseType>&
     {
         return m_promise;
     }
@@ -23,7 +23,7 @@ class ITask
     virtual void run() = 0;
 
     [[nodiscard]]
-    auto getResult() -> std::any
+    auto getResult() -> PromiseType
     {
         return m_promise.get_future().get();
     }
@@ -35,7 +35,7 @@ class ITask
     }
 
     [[nodiscard]]
-    auto getFuture() noexcept -> std::future<std::any>
+    auto getFuture() noexcept -> std::future<PromiseType>
     {
         return m_promise.get_future();
     }

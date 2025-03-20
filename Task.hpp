@@ -9,8 +9,9 @@
 #include <type_traits>
 #include <utility>
 
-template <typename ReturnType, typename... ArgTypes>
-class Task : public ITask
+template <typename ReturnType, typename PromiseType, typename... ArgTypes>
+  requires (std::convertible_to<ReturnType, PromiseType> || std::is_void_v<PromiseType> || std::same_as<PromiseType, std::any>)
+class Task : public ITask<PromiseType>
 {
   private:
     std::function<ReturnType(ArgTypes...)> m_function;
@@ -34,27 +35,51 @@ class Task : public ITask
 
     void run() override
     {
-        if (getIsStarted())
+        if (static_cast<ITask<PromiseType>*>(this)->getIsStarted())
         {
             // prevent restarting, we moved the arguments.
             throw std::runtime_error("Task already started");
         }
-        setStarted();
+        this->setStarted();
         try
         {
-            if constexpr (std::same_as<ReturnType, void>)
+            if constexpr (std::is_void_v<ReturnType>)
             {
+                // No return from task
                 std::apply(m_function, std::move(m_args));
-                getPromise().set_value(std::any {});
+
+                // we need to fulfill the promise anyway.
+                // If promise type is any, construct empty any. Otherwise promise type is void, and we just set completed.
+                if constexpr (std::same_as<PromiseType, std::any>)
+                {
+                    this->getPromise().set_value(std::any {});
+                }
+                else if constexpr (std::is_void_v<PromiseType>)
+                {
+                    this->getPromise().set_value();
+                }
+                else {
+                    static_assert(false, "Promise type should be void, std::any, or ReturnType");
+                }
             }
             else
             {
-                getPromise().set_value(std::apply(m_function, std::move(m_args)));
+                // ReturnType of task is not void
+                if constexpr (std::is_void_v<PromiseType>)
+                {
+                    // we have a return, but promise type is void, so we just set completed
+                    this->getPromise().set_value();
+                }
+                else
+                {
+                    // set the value to the return
+                    this->getPromise().set_value(static_cast<PromiseType>(std::apply(m_function, std::move(m_args))));
+                }
             }
         }
         catch (...)
         {
-            getPromise().set_exception(std::current_exception());
+            this->getPromise().set_exception(std::current_exception());
         }
     }
 };

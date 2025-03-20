@@ -32,10 +32,12 @@ auto main() -> int
         auto       l3      = [](int& ref) { ref++; };
         int        x       = 2;
         auto       future3 = tp.enqueue(l3, x);
+        // warning: potential UB: data race if x is accessed before future3 is done.
 
         // we know future2's lambda returned an int, so we can any_cast to int.
         std::println("{}", std::any_cast<int>(future2.get()));
         future3.get();    // block until done, waiting for the lambda to modify x
+        // access to x is now safe again.
         std::println("expecting x == 3, got x == {}", x);
     }
     {

@@ -18,7 +18,6 @@ auto main() -> int
     int x = 2;
     auto future3 = tp.enqueue(l3, std::ref(x));
 
-    future.get();
     std::println("{}", std::any_cast<int>(future2.get()));
     future3.get(); // block until done
     std::println("expecting x == 3, got x == {}", x);

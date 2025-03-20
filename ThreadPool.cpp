@@ -26,7 +26,7 @@ ThreadPool::ThreadPool(std::size_t numThreads)
                       m_taskQueue.pop();
                   }
                   task->run();
-                  task = nullptr;
+                  task = nullptr; // free memory without waiting for next task.
               }
           }
         );

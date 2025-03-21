@@ -74,6 +74,12 @@ class ThreadPool
         }
     }
 
+    [[nodiscard]]
+    auto threadCount() const noexcept -> std::size_t
+    {
+        return m_threads.size();
+    }
+
     ~ThreadPool() { shutdownAndWait(); }
 
     template <typename CallableType, typename... ArgTypes>

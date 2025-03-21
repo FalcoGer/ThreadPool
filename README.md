@@ -11,6 +11,10 @@ See main.cpp for examples.
 
 If you need cooperative cancelation, this is outside the scope of ThreadPool. Pass an `std::stop_token` from an `std::stop_source` into your callable and manage it yourself, or use something else.
 
+Calling `resize(const std::size_t NUM_THREADS)` on the ThreadPool allows to add or remove threads. Removing threads will block until all removed threads executed their current task.
+
+Calling `shutdownAndWait()` on a thread pool will stop all threads and block until their current tasks are done. A thread pool can be started up again with `resize`.
+
 #### Simple Example
 
 ```cpp

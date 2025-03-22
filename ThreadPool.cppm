@@ -56,7 +56,7 @@ class ThreadPool
         {
             m_threads.reserve(NUM_THREADS);
             for ([[maybe_unused]]
-                 auto threadNum : std::views::iota(m_threads.size()) | std::views::take(NUM_THREADS - m_threads.size()))
+                 auto threadNum : std::views::iota(m_threads.size(), NUM_THREADS))
             {
                 m_threads.emplace_back([this](const std::stop_token& stop) { runner(stop); });
             }

@@ -2,9 +2,9 @@
 #include <chrono>
 #include <numbers>
 #include <print>
+#include <set>
 #include <stdexcept>
 #include <thread>
-#include <set>
 
 import ThreadPool;
 
@@ -12,7 +12,7 @@ auto main() -> int
 {
     using ThreadPool::TaskID;
     using ThreadPool::ThreadPool;
-    // NOLINTBEGIN (readability-magic-numbers) // example code
+    // NOLINTBEGIN (readability-magic-numbers) // example code, actual values are meaningless and giving names is not helping readability.
     {
         ThreadPool tp {};    // std::any by default
 

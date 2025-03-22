@@ -41,6 +41,27 @@ class TaskTicket
     }
 
     auto get() -> PromiseType { return m_future.get(); }
+
+    template <typename T>
+        requires std::same_as<PromiseType, std::any>
+    auto get() -> T
+    {
+        return std::any_cast<T>(m_future.get());
+    }
+
+    template <typename T>
+        requires std::convertible_to<PromiseType, T> && (!std::same_as<PromiseType, std::any>) && (!std::is_void_v<T>)
+    auto get() -> T
+    {
+        return static_cast<T>(m_future.get());
+    }
+
+    template <typename T>
+        requires std::is_void_v<T>
+    auto get() -> void
+    {
+        m_future.get();
+    }
 };
 
 }    // namespace ThreadPool

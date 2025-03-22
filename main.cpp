@@ -5,12 +5,15 @@
 #include <set>
 #include <stdexcept>
 #include <thread>
+#include <vector>
 
 import ThreadPool;
 
 auto main() -> int
 {
     using ThreadPool::TaskID;
+    using ThreadPool::TaskPriority;
+    using ThreadPool::TaskTicket;
     using ThreadPool::ThreadPool;
     // NOLINTBEGIN (readability-magic-numbers) // example code, actual values are meaningless and giving names is not helping readability.
     {
@@ -29,18 +32,48 @@ auto main() -> int
         // return type: int
         auto l2      = [a = 42](const float b, const double c) -> int { return static_cast<int>(a + (b * c)); };
         auto ticket2 = tp.enqueue(l2, 3.14F, 6.9);
+        auto ticket3 = tp.enqueue(l2, 1.23, 4.56);
 
         // return type void, we take a reference though.
         auto l3      = [](int& ref) { ref++; };
         int  x       = 2;
-        auto ticket3 = tp.enqueue(l3, x);
+        auto ticket4 = tp.enqueue(l3, x);
         // warning: potential UB: data race if x is accessed before ticket3 is done.
 
         // we know ticket2's lambda returned an int, so we can any_cast to int.
         std::println("{}", std::any_cast<int>(ticket2.get()));
-        ticket3.get();    // block until done, waiting for the lambda to modify x
+        std::println("{}", ticket3.get<int>());
+        ticket4.get();    // block until done, waiting for the lambda to modify x
         // access to x is now safe again.
         std::println("expecting x == 3, got x == {}", x);
+    }
+    {
+        ThreadPool tp {2};
+        auto             holdup = []() { std::this_thread::sleep_for(std::chrono::milliseconds(200)); };
+        // make all threads busy
+        auto _ = tp.enqueue(holdup);
+        _ = tp.enqueue(holdup);
+
+        // add tasks with different priorities
+        std::vector<TaskTicket<std::any>> tickets;
+        auto                    work = [](const int x)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            std::println("task with priority {} is done.", x);
+            return x;
+        };
+        tickets.push_back(tp.enqueueWithPriority(TaskPriority{0}, work, 0));
+        tickets.push_back(tp.enqueueWithPriority(TaskPriority{2}, work, 2));
+        tickets.push_back(tp.enqueueWithPriority(TaskPriority{-1}, work, -1));
+        tickets.push_back(tp.enqueueWithPriority(TaskPriority {1}, work, 1));
+        tickets.push_back(tp.enqueueWithPriority(TaskPriority{3}, work, 3));
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+        for (auto&& ticket : tickets)
+        {
+            std::println("Task {}: {}", ticket.getTaskID(), ticket.get<int>());
+        }
     }
     {
         ThreadPool<void> tp {};

@@ -18,7 +18,7 @@ Calling `shutdownAndWait()` on a thread pool will stop all threads and block unt
 The `TaskTicket` contains a TaskID and a `std::future<PromiseType>`. `.get()` calls `.get()` on the future. You can obtain the future directly with `.getFuture()`. You get the TaskID with `.getTaskID()`. This TaskID can be used to create dependent Tasks with the `.enqueueWithDependencies(std::set<TaskID>&&, Callable, Arguments...)` function.
 If a task fails (because it throws), all of it's dependent tasks will be canceled. Calling `.get()` on their futures will throw a `ThreadPool::TaskCanceled` exception.
 
-A `TaskPriority` can be added. Higher priority tasks will be preferred when selecting the next task for execution as long as their dependencies are fulfilled. Use `enqueueWithPriority(TaskPriority, Callable, Arguments...)`.
+A `TaskPriority` can be added. Higher priority tasks (larger values) will be preferred when selecting the next task for execution as long as their dependencies are fulfilled. Use `enqueueWithPriority(TaskPriority, Callable, Arguments...)`.
 Do both priority and dependencies with `enqueueWithPriorityAndDependencies(TaskPriority, std::set<TaskID>, Callable, Arguments...)`.
 
 #### Simple Example
@@ -39,7 +39,7 @@ auto ticket2 = tp.enqueue(increment, 42); // queues task for execution
 
 // blocks execution until futures are ready
 bool result1 = std::any_cast<bool>(ticket1.get());
-int result2 = std::any_cast<int>(ticket2.get());
+int result2 = ticket2.get<int>(); // alternative way to get integer if PromiseType is any
 
 // use the results
 std::println("Value was {}", result ? "even" : "odd");

@@ -18,7 +18,7 @@ Calling `shutdownAndWait()` on a thread pool will stop all threads and block unt
 The `TaskTicket` contains a TaskID and a `std::future<PromiseType>`. `.get()` calls `.get()` on the future. You can obtain the future directly with `.getFuture()`. You get the TaskID with `.getTaskID()`. This TaskID can be used to create dependent Tasks with the `.enqueueWithDependencies(std::set<TaskID>&&, Callable, Arguments...)` function.
 If a task fails (because it throws), all of it's dependent tasks will be canceled. Calling `.get()` on their futures will throw a `ThreadPool::TaskCanceled` exception.
 
-A `TaskPriority` can be added. Higher priority tasks (larger values) will be preferred when selecting the next task for execution as long as their dependencies are fulfilled. Use `enqueueWithPriority(TaskPriority, Callable, Arguments...)`.
+A `TaskPriority` can be added. Higher priority tasks (larger values) will be preferred when selecting the next task for execution as long as their dependencies are fulfilled. Tasks with the same priority will have tasks that were scheduled earlier (lower TaskID) be preferred. Use `enqueueWithPriority(TaskPriority, Callable, Arguments...)`.
 Do both priority and dependencies with `enqueueWithPriorityAndDependencies(TaskPriority, std::set<TaskID>, Callable, Arguments...)`.
 
 #### Simple Example

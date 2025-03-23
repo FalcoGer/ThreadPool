@@ -131,6 +131,11 @@ template <typename PromiseType>
 // NOLINTNEXTLINE(cert-dcl58-cpp) // specialization for std::formatter is okay.
 struct std::formatter<ThreadPool::TaskTicket<PromiseType>>
 {
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        return ctx.begin();
+    }
+
     auto format(const ThreadPool::TaskTicket<PromiseType>& ticket, std::format_context& ctx) const
     {
         std::string status = "Retrieved";

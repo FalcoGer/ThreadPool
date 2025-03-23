@@ -37,8 +37,9 @@ auto main() -> int
         // return type void, we take a reference though.
         auto l4      = [](int& ref) { ref++; };
         int  x       = 2;
+        std::println("Ticket 2: {}", ticket2);
         auto ticket4 = tp.enqueue(l4, x);
-        // warning: potential UB: data race if x is accessed before ticket3 is done.
+        // warning: potential UB: data race if x is accessed before ticket4 is done.
 
         // we know ticket2's lambda returned an int, so we can any_cast to int.
         std::println("{}", std::any_cast<int>(ticket2.get()));

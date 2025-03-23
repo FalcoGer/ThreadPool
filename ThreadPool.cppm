@@ -25,6 +25,7 @@ export import :TaskPriority;
 export import :TaskTicket;
 import :ITask;
 import :Task;
+import :ITaskUniquePtrPriorityComparator;
 
 namespace ThreadPool
 {
@@ -259,7 +260,7 @@ class ThreadPool
                                 && taskToCancel->hasDependency(CANCELED_TASK_ID))
                             {
                                 std::string reason {std::format(
-                                  "Task {} canceled because task {} which this task depends on {}.",
+                                  REASON_FMT,
                                   taskToCancel->getTaskID(),
                                   CANCELED_TASK_ID,
                                   m_failedTasks[CANCELED_TASK_ID]
@@ -321,7 +322,7 @@ class ThreadPool
                 if (task->hasDependency(FAILED_TASK_ID))
                 {
                     std::string reason {std::format(
-                      "Task {} canceled because task {} which this task depends on {}.",
+                      REASON_FMT,
                       task->getTaskID(),
                       FAILED_TASK_ID,
                       FAILED_TASK_STATE == InternalDetail::ITask<PromiseType>::ETaskState::FAILED
@@ -366,11 +367,10 @@ class ThreadPool
         return ticket;
     }
 
-    std::uint32_t m_taskCounter {};
     std::priority_queue<
       std::unique_ptr<InternalDetail::ITask<PromiseType>>,
       std::vector<std::unique_ptr<InternalDetail::ITask<PromiseType>>>,
-      InternalDetail::ITaskUniquePtrPriorityComparitor<PromiseType>>
+      InternalDetail::ITaskUniquePtrPriorityComparator<PromiseType>>
                                                                               m_taskQueue;
     std::set<TaskID>                                                          m_taskQueueTaskIds;
     std::map<TaskID, typename InternalDetail::ITask<PromiseType>::ETaskState> m_failedTasks;
@@ -380,5 +380,7 @@ class ThreadPool
     std::mutex                                                                m_tasksWithDependenciesMutex;
     std::mutex                                                                m_failedTasksMutex;
     std::condition_variable                                                   m_cvTaskReady;
+    std::uint32_t                                                             m_taskCounter {};
+    static constexpr const char* REASON_FMT {"Task {0} canceled, because task {1}, which task {0} depends on, {2}."};
 };
 }    // namespace ThreadPool

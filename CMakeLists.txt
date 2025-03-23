@@ -55,6 +55,7 @@ target_sources(ThreadPoolModule
       ThreadPool-TaskCanceled.cppm
       ThreadPool-TaskTicket.cppm
       ThreadPool-TaskPriority.cppm
+      ThreadPool-ITaskUniquePtrPriorityComparator.cppm
 )
 set_target_properties(ThreadPoolModule PROPERTIES CXX_SCAN_FOR_MODULES YES)
 

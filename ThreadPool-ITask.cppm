@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <atomic>
 #include <exception>
 #include <future>
 #include <mutex>
@@ -11,6 +12,7 @@ export module ThreadPool:ITask;
 
 import :TaskID;
 import :TaskPriority;
+import :ETaskState;
 
 namespace ThreadPool::InternalDetail
 {
@@ -20,28 +22,18 @@ class ThreadPool;
 export template <typename PromiseType>
 class ITask
 {
-  public:
-    enum class ETaskState : std::uint8_t
-    {
-        WAITING = 0,
-        STARTED,
-        FINISHED,
-        FAILED,
-        CANCELED
-    };
-
   private:
-    ETaskState                        m_state {ETaskState::WAITING};
-    std::promise<PromiseType>         m_promise;
-    TaskID                            m_taskId;
-    TaskPriority                      m_priority;
-    std::set<TaskID>                  m_dependencies;
-    mutable std::mutex                m_dependenciesMutex;
-    std::optional<std::exception_ptr> m_exception;
+    std::shared_ptr<std::atomic<ETaskState>> m_state;
+    std::promise<PromiseType>                m_promise;
+    TaskID                                   m_taskId;
+    TaskPriority                             m_priority;
+    std::set<TaskID>                         m_dependencies;
+    mutable std::mutex                       m_dependenciesMutex;
+    std::optional<std::exception_ptr>        m_exception;
 
   protected:
-    void setStarted() noexcept { m_state = ETaskState::STARTED; }
-    void setFinished() noexcept { m_state = ETaskState::FINISHED; }
+    void setStarted() noexcept { m_state->store(ETaskState::STARTED); }
+    void setFinished() noexcept { m_state->store(ETaskState::FINISHED); }
 
     [[nodiscard]]
     auto getPromise() noexcept -> std::promise<PromiseType>&
@@ -56,7 +48,10 @@ class ITask
     }
 
     explicit ITask(const TaskID TASK_ID, const TaskPriority PRIORITY, std::set<TaskID>&& dependencies)
-            : m_taskId {TASK_ID}, m_priority(PRIORITY), m_dependencies(std::move(dependencies))
+            : m_state {std::make_shared<std::atomic<ETaskState>>(ETaskState::WAITING)},
+              m_taskId {TASK_ID},
+              m_priority(PRIORITY),
+              m_dependencies(std::move(dependencies))
     {
         // empty
     }
@@ -68,13 +63,13 @@ class ITask
 
     void         setCanceled(std::exception_ptr&& exception) noexcept
     {
-        m_state = ETaskState::CANCELED;
+        m_state->store(ETaskState::CANCELED);
         setException(std::move(exception));
     }
 
     void setFailed(std::exception_ptr&& exception) noexcept
     {
-        m_state = ETaskState::FAILED;
+        m_state->store(ETaskState::FAILED);
         setException(std::move(exception));
     }
 
@@ -86,6 +81,12 @@ class ITask
 
     [[nodiscard]]
     auto getState() const noexcept -> ETaskState
+    {
+        return m_state->load();
+    }
+
+    [[nodiscard]]
+    auto getStatePtr() const noexcept -> const std::shared_ptr<std::atomic<ETaskState>>&
     {
         return m_state;
     }

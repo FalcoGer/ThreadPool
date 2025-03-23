@@ -19,6 +19,7 @@ module;
 
 export module ThreadPool;
 
+export import :ETaskState;
 export import :TaskCanceled;
 export import :TaskID;
 export import :TaskPriority;
@@ -177,10 +178,10 @@ class ThreadPool
                 // by a currently running task
                 const std::lock_guard<std::mutex> LOCK(m_queueMutex);
                 m_taskQueueTaskIds.erase(task->getTaskID());
-                if (task->getState() == InternalDetail::ITask<PromiseType>::ETaskState::FAILED)
+                if (task->getState() == ETaskState::FAILED)
                 {
                     const std::lock_guard<std::mutex> FAILED_TASKS_LOCK {m_failedTasksMutex};
-                    m_failedTasks[task->getTaskID()] = InternalDetail::ITask<PromiseType>::ETaskState::FAILED;
+                    m_failedTasks[task->getTaskID()] = ETaskState::FAILED;
                 }
             }
 
@@ -195,13 +196,13 @@ class ThreadPool
         // if task successful, move to queue.
         // otherwise set future exception and drop the task.
 
-        if (task->getState() == InternalDetail::ITask<PromiseType>::ETaskState::FINISHED)
+        if (task->getState() == ETaskState::FINISHED)
         {
             const std::lock_guard<std::mutex> DEPENDENCY_LOCK {m_tasksWithDependenciesMutex};
             for (auto& taskWithDependencies : m_tasksWithDependencies)
             {
                 if (!taskWithDependencies
-                    || taskWithDependencies->getState() == InternalDetail::ITask<PromiseType>::ETaskState::CANCELED)
+                    || taskWithDependencies->getState() == ETaskState::CANCELED)
                 {
                     needToEraseFromDependentTaskQueue = true;
                     continue;
@@ -222,7 +223,7 @@ class ThreadPool
                 }
             }
         }
-        else if (task->getState() == InternalDetail::ITask<PromiseType>::ETaskState::FAILED)
+        else if (task->getState() == ETaskState::FAILED)
         {
             // need to recursively cancel all dependent tasks
             std::lock(m_tasksWithDependenciesMutex, m_failedTasksMutex);
@@ -232,7 +233,7 @@ class ThreadPool
             for (auto& taskWithDependencies : m_tasksWithDependencies)
             {
                 if (!taskWithDependencies
-                    || taskWithDependencies->getState() == InternalDetail::ITask<PromiseType>::ETaskState::CANCELED)
+                    || taskWithDependencies->getState() == ETaskState::CANCELED)
                 {
                     needToEraseFromDependentTaskQueue = true;
                     continue;
@@ -251,12 +252,12 @@ class ThreadPool
                         canceledTasks.pop();
                         if (!m_failedTasks.contains(CANCELED_TASK_ID))
                         {
-                            m_failedTasks[CANCELED_TASK_ID] = InternalDetail::ITask<PromiseType>::ETaskState::CANCELED;
+                            m_failedTasks[CANCELED_TASK_ID] = ETaskState::CANCELED;
                         }
                         for (auto& taskToCancel : m_tasksWithDependencies)
                         {
                             if (taskToCancel
-                                && taskToCancel->getState() == InternalDetail::ITask<PromiseType>::ETaskState::WAITING
+                                && taskToCancel->getState() == ETaskState::WAITING
                                 && taskToCancel->hasDependency(CANCELED_TASK_ID))
                             {
                                 std::string reason {std::format(
@@ -264,7 +265,7 @@ class ThreadPool
                                   taskToCancel->getTaskID(),
                                   CANCELED_TASK_ID,
                                   m_failedTasks[CANCELED_TASK_ID]
-                                      == InternalDetail::ITask<PromiseType>::ETaskState::FAILED
+                                      == ETaskState::FAILED
                                     ? "has failed"
                                     : "got canceled"
                                 )};
@@ -290,10 +291,10 @@ class ThreadPool
               [](const auto& taskWithDependencies)
               {
                   return !taskWithDependencies
-                         || taskWithDependencies->getState() == InternalDetail::ITask<PromiseType>::ETaskState::CANCELED
-                         || taskWithDependencies->getState() == InternalDetail::ITask<PromiseType>::ETaskState::FAILED
+                         || taskWithDependencies->getState() == ETaskState::CANCELED
+                         || taskWithDependencies->getState() == ETaskState::FAILED
                          || taskWithDependencies->getState()
-                              == InternalDetail::ITask<PromiseType>::ETaskState::FINISHED;
+                              == ETaskState::FINISHED;
               }
             );
         }
@@ -302,7 +303,7 @@ class ThreadPool
     auto enqueue(std::unique_ptr<InternalDetail::ITask<PromiseType>>&& task) -> TaskTicket<PromiseType>
     {
         const TaskID            TASK_ID = task->getTaskID();
-        TaskTicket<PromiseType> ticket {TASK_ID, task->getFuture()};
+        TaskTicket<PromiseType> ticket {TASK_ID, task->getStatePtr(), task->getFuture()};
 
         if (!task->hasDependencies())
         {
@@ -325,7 +326,7 @@ class ThreadPool
                       REASON_FMT,
                       task->getTaskID(),
                       FAILED_TASK_ID,
-                      FAILED_TASK_STATE == InternalDetail::ITask<PromiseType>::ETaskState::FAILED
+                      FAILED_TASK_STATE == ETaskState::FAILED
                         ? "has failed"
                         : "got canceled"
                     )};
@@ -333,9 +334,9 @@ class ThreadPool
                     break;
                 }
             }
-            if (task->getState() == InternalDetail::ITask<PromiseType>::ETaskState::CANCELED)
+            if (task->getState() == ETaskState::CANCELED)
             {
-                m_failedTasks[TASK_ID] = InternalDetail::ITask<PromiseType>::ETaskState::CANCELED;
+                m_failedTasks[TASK_ID] = ETaskState::CANCELED;
                 return ticket;    // do not add task to any queue
             }
 
@@ -373,7 +374,7 @@ class ThreadPool
       InternalDetail::ITaskUniquePtrPriorityComparator<PromiseType>>
                                                                               m_taskQueue;
     std::set<TaskID>                                                          m_taskQueueTaskIds;
-    std::map<TaskID, typename InternalDetail::ITask<PromiseType>::ETaskState> m_failedTasks;
+    std::map<TaskID, ETaskState>                                              m_failedTasks;
     std::vector<std::unique_ptr<InternalDetail::ITask<PromiseType>>>          m_tasksWithDependencies;
     std::vector<std::jthread>                                                 m_threads;
     std::mutex                                                                m_queueMutex;

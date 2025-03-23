@@ -54,7 +54,7 @@ class Task : public ITask<PromiseType>
 
     void run() override
     {
-        if (this->getState() != ITask<PromiseType>::ETaskState::WAITING)
+        if (this->getState() != ETaskState::WAITING)
         {
             // prevent restarting, we moved the arguments.
             throw std::runtime_error("Task already started");

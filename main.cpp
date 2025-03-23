@@ -35,15 +35,15 @@ auto main() -> int
         auto ticket3 = tp.enqueue(l2, 1.23, 4.56);
 
         // return type void, we take a reference though.
-        auto l3      = [](int& ref) { ref++; };
+        auto l4      = [](int& ref) { ref++; };
         int  x       = 2;
-        auto ticket4 = tp.enqueue(l3, x);
+        auto ticket4 = tp.enqueue(l4, x);
         // warning: potential UB: data race if x is accessed before ticket3 is done.
 
         // we know ticket2's lambda returned an int, so we can any_cast to int.
         std::println("{}", std::any_cast<int>(ticket2.get()));
         std::println("{}", ticket3.get<int>());
-        ticket4.get();    // block until done, waiting for the lambda to modify x
+        ticket4.get<void>();    // block until done, waiting for the lambda to modify x
         // access to x is now safe again.
         std::println("expecting x == 3, got x == {}", x);
     }

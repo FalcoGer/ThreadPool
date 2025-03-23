@@ -40,25 +40,53 @@ class TaskTicket
         return m_future;
     }
 
-    auto get() -> PromiseType { return m_future.get(); }
+    [[nodiscard]]
+    auto checkReady() const noexcept -> bool
+    {
+        using std::chrono_literals::operator""ms;
+        return m_future.wait_for(0ms) == std::future_status::ready;
+    }
+
+    [[nodiscard]]
+    auto isValid() const noexcept -> bool
+    {
+        return m_future.valid();
+    }
+
+    [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
+    auto get() -> PromiseType
+        requires (!std::is_void_v<PromiseType>)
+    {
+        return m_future.get();
+    }
+
+    void get()
+        requires std::is_void_v<PromiseType>
+    {
+        m_future.get();
+    }
 
     template <typename T>
-        requires std::same_as<PromiseType, std::any>
+        requires std::same_as<PromiseType, std::any> && (!std::same_as<T, std::any>) && (!std::is_void_v<T>)
+    [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
     auto get() -> T
     {
+        // PromiseType is any, and T is not any or void.
         return std::any_cast<T>(m_future.get());
     }
 
     template <typename T>
-        requires std::convertible_to<PromiseType, T> && (!std::same_as<PromiseType, std::any>) && (!std::is_void_v<T>)
+        requires std::same_as<PromiseType, T> && (!std::is_void_v<T>)
+    [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
     auto get() -> T
     {
-        return static_cast<T>(m_future.get());
+        // T is the same as PromiseType, neither is void
+        return m_future.get();
     }
 
     template <typename T>
         requires std::is_void_v<T>
-    auto get() -> void
+    void get()
     {
         m_future.get();
     }

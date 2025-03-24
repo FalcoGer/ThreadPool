@@ -15,6 +15,8 @@ auto main() -> int
     using ThreadPool::TaskPriority;
     using ThreadPool::TaskTicket;
     using ThreadPool::ThreadPool;
+
+    using namespace std::chrono_literals;
     // NOLINTBEGIN (readability-magic-numbers) // example code, actual values are meaningless and giving names is not helping readability.
     {
         ThreadPool tp {};    // std::any by default
@@ -22,7 +24,7 @@ auto main() -> int
         // return type: void
         auto       l = []()
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            std::this_thread::sleep_for(200ms);
             std::println("Hello world");
         };
         auto ticket1 = tp.enqueue(l);
@@ -50,7 +52,7 @@ auto main() -> int
     }
     {
         ThreadPool tp {2};
-        auto             holdup = []() { std::this_thread::sleep_for(std::chrono::milliseconds(200)); };
+        auto             holdup = []() { std::this_thread::sleep_for(200ms); };
         // make all threads busy
         auto _ = tp.enqueue(holdup);
         _ = tp.enqueue(holdup);
@@ -59,7 +61,7 @@ auto main() -> int
         std::vector<TaskTicket<std::any>> tickets;
         auto                    work = [](const int x)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            std::this_thread::sleep_for(200ms);
             std::println("task with priority {} is done.", x);
             return x;
         };
@@ -69,7 +71,7 @@ auto main() -> int
         tickets.push_back(tp.enqueueWithPriority(TaskPriority {1}, work, 1));
         tickets.push_back(tp.enqueueWithPriority(TaskPriority{3}, work, 3));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(50ms);
 
         for (auto&& ticket : tickets)
         {
@@ -109,7 +111,7 @@ auto main() -> int
               while (!stop.stop_requested())
               {
                   i++;
-                  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                  std::this_thread::sleep_for(100ms);
               }
               return i;
           },
@@ -122,13 +124,13 @@ auto main() -> int
               while (!stop.stop_requested())
               {
                   i++;
-                  std::this_thread::sleep_for(std::chrono::milliseconds(25));
+                  std::this_thread::sleep_for(25ms);
               }
               return i;
           },
           sc.get_token()
         );
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(1s);
         sc.request_stop();
         std::println("{} {}", ticket.get(), ticket2.get());
     }
@@ -154,7 +156,7 @@ auto main() -> int
         auto            ticket = tp.enqueue(
           [](int& x) -> int
           {
-              std::this_thread::sleep_for(std::chrono::seconds(3));
+              std::this_thread::sleep_for(3s);
               std::println("task1 done");
               return x *= 2;
           },
@@ -166,7 +168,7 @@ auto main() -> int
           deps,
           [](int x, int& y) -> int
           {
-              std::chrono::seconds(3);
+              std::this_thread::sleep_for(3s);
               std::println("task2 done");
               return y = x + 1;
           },
@@ -177,7 +179,7 @@ auto main() -> int
           deps,
           [](int x, int& z) -> int
           {
-              std::chrono::seconds(2);
+            std::this_thread::sleep_for(2s);
               std::println("task3 done");
               return z = x / 4;
           },
@@ -192,7 +194,7 @@ auto main() -> int
           deps,
           [](int x, int y, int z) -> int
           {
-              std::chrono::seconds(1);
+            std::this_thread::sleep_for(1s);
               std::println("task4 done");
               return x + y + z;
           },
@@ -209,20 +211,20 @@ auto main() -> int
     }
     {
         ThreadPool<void> tp {};
-        auto             ticket = tp.enqueue(
+        auto             ticket1 = tp.enqueue(
           []()
           {
-              std::this_thread::sleep_for(std::chrono::seconds(3));
+              std::this_thread::sleep_for(3s);
               throw std::runtime_error("Task Failed");
           }
         );
         std::set<TaskID> deps{};
-        deps.insert(ticket.getTaskID());
+        deps.insert(ticket1.getTaskID());
         auto ticket2 = tp.enqueueWithDependencies(
           deps,
           []()
           {
-              std::this_thread::sleep_for(std::chrono::seconds(3));
+              std::this_thread::sleep_for(3s);
               std::println("Task2 depending on 1 done");
           }
         );
@@ -232,22 +234,22 @@ auto main() -> int
           deps2,
           []()
           {
-              std::this_thread::sleep_for(std::chrono::seconds(3));
+              std::this_thread::sleep_for(3s);
               std::println("Task3 depending on 2 done");
           }
         );
-        std::this_thread::sleep_for(std::chrono::seconds(4)); // let task0 fail before adding task depending on it
+        std::this_thread::sleep_for(500ms); // let task0 fail before adding task depending on it
         auto ticket4 = tp.enqueueWithDependencies(
             deps,
             []()
             {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::this_thread::sleep_for(1s);
                 std::println("Task4 depending on 1 done");
             }
           );
         try
         {
-            ticket.get();
+            ticket1.get();
         }
         catch (const std::runtime_error& ex)
         {

@@ -200,6 +200,12 @@ class ThreadPool
                 {
                     break;
                 }
+                // priority queue .top() returns only a const reference
+                // this is because of the max heap invariant of the priority queue
+                // changing any element could invalidate this invariant
+                // but we need to move from the top of the queue since ITaskPtrType is non copyable
+                // This leaves a nullptr in the priority queue, which we pop immediately.
+                // Since the queue is locked through the mutex, this should be safe.
                 task = std::move(const_cast<ITaskPtrType&>(m_taskQueue.top()));
                 m_taskQueue.pop();
             }

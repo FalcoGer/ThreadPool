@@ -50,15 +50,15 @@ add_library(ThreadPoolModule)
 target_sources(ThreadPoolModule
   PUBLIC
     FILE_SET cxx_modules TYPE CXX_MODULES FILES
-      ThreadPool.cppm
-      ThreadPool-ITask.cppm
-      ThreadPool-Task.cppm
-      ThreadPool-TaskID.cppm
-      ThreadPool-TaskCanceled.cppm
-      ThreadPool-TaskTicket.cppm
-      ThreadPool-TaskPriority.cppm
-      ThreadPool-ITaskUniquePtrPriorityComparator.cppm
       ThreadPool-ETaskState.cppm
+      ThreadPool-TaskPriority.cppm
+      ThreadPool-TaskCanceled.cppm
+      ThreadPool-TaskID.cppm
+      ThreadPool-TaskTicket.cppm
+      ThreadPool-ITask.cppm
+      ThreadPool-ITaskUniquePtrPriorityComparator.cppm
+      ThreadPool-Task.cppm
+      ThreadPool.cppm
 )
 set_target_properties(ThreadPoolModule PROPERTIES CXX_SCAN_FOR_MODULES YES)
 

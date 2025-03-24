@@ -16,10 +16,12 @@ Calling `resize(const std::size_t NUM_THREADS)` on the ThreadPool allows to add 
 Calling `shutdownAndWait()` on a thread pool will stop all threads and block until their current tasks are done. A thread pool can be started up again with `resize`.
 
 The `TaskTicket` contains a `TaskID`, a shared pointer to an atomic `ETaskState`, and a `std::future<PromiseType>`. `.get()` calls `.get()` on the future. `.get<T>` will `std::any_cast` the type for you for convenience. `.get<void>` will discard the value for you. You can obtain the future directly with `.getFuture()`. You get the TaskID with `.getTaskID()`. You can get the status of the task through `.getState()`. The TaskID can be used to create dependent Tasks with the `.enqueueWithDependencies(std::set<TaskID>&&, Callable, Arguments...)` function.
-If a task fails (because it throws), all of it's dependent tasks will be canceled. Calling `.get()` on their futures will throw a `ThreadPool::TaskCanceled` exception.
+If a task fails (because it throws), all of it's dependent tasks will be canceled. Calling `.get()` on their futures will throw a `ThreadPool::TaskCanceled` exception, which is a `std::runtime_error` exception.
 
 A `TaskPriority` can be added. Higher priority tasks (larger values) will be preferred when selecting the next task for execution as long as their dependencies are fulfilled. Tasks with the same priority will have tasks that were scheduled earlier (lower TaskID) be preferred. Use `enqueueWithPriority(TaskPriority, Callable, Arguments...)`.
 Do both priority and dependencies with `enqueueWithPriorityAndDependencies(TaskPriority, std::set<TaskID>, Callable, Arguments...)`.
+
+A formatter for `TaskTicket` is provided. It formats to `Task <ID> (<State Description>)`.
 
 #### Simple Example
 

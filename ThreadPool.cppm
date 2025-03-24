@@ -208,75 +208,91 @@ class ThreadPool
                 task->run();
             }
 
-            bool                              anyDependentTaskNeedsToBeRemoved {false};
+            updateDependentTasksQueue(task);
+        }
+    }
 
-            const std::lock_guard<std::mutex> DEPENDENCY_LOCK {m_tasksWithDependenciesMutex};
-            // stack is used to recursively cancel tasks
-            if (task->getState() == ETaskState::CANCELED || task->getState() == ETaskState::FAILED)
+    void updateDependentTasksQueue(const ITaskPtrType& task)
+    {
+        bool                              anyDependentTaskNeedsToBeRemoved {false};
+
+        const std::lock_guard<std::mutex> DEPENDENCY_LOCK {m_tasksWithDependenciesMutex};
+        // stack is used to recursively cancel tasks
+        if (task->getState() == ETaskState::CANCELED || task->getState() == ETaskState::FAILED)
+        {
+            anyDependentTaskNeedsToBeRemoved = updateDependentTasksQueueForFailedTask(task);
+        }
+        else
+        {
+            anyDependentTaskNeedsToBeRemoved = updateDependentTasksQueueForFinishedTask(task);
+        }
+
+        if (anyDependentTaskNeedsToBeRemoved)
+        {
+            std::erase_if(
+              m_tasksWithDependencies,
+              [](const auto& taskWithDependencies)
+              {
+                  // clean up the nullptr we left when moving to the task queue.
+                  return !taskWithDependencies
+                         || taskWithDependencies->getState() == ETaskState::CANCELED
+                         || taskWithDependencies->getState() == ETaskState::FAILED
+                         || taskWithDependencies->getState() == ETaskState::FINISHED;
+              }
+            );
+        }
+    }
+
+    auto updateDependentTasksQueueForFinishedTask(const ITaskPtrType& task) -> bool
+    {
+        bool result {false};
+        for (auto& taskWithDependencies : m_tasksWithDependencies)
+        {
+            if (taskWithDependencies->getState() == ETaskState::CANCELED
+                || taskWithDependencies->getState() == ETaskState::FAILED
+                || taskWithDependencies->getState() == ETaskState::FINISHED)
             {
-                std::stack<TaskID> canceledTasks {};
-                canceledTasks.push(task->getTaskID());
-                while (!canceledTasks.empty())
-                {
-                    TaskID canceledTask = std::move(canceledTasks.top());
-                    canceledTasks.pop();
-
-                    for (auto& taskWithDependencies : m_tasksWithDependencies)
-                    {
-                        if (taskWithDependencies->updateDependency(canceledTask))
-                        {
-                            // task depended on the canceledTask and was canceled in turn.
-                            canceledTasks.push(taskWithDependencies->getTaskID());
-                            anyDependentTaskNeedsToBeRemoved = true;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // task was successful.
-                for (auto& taskWithDependencies : m_tasksWithDependencies)
-                {
-                    if (taskWithDependencies->getState() == ETaskState::CANCELED
-                        || taskWithDependencies->getState() == ETaskState::FAILED
-                        || taskWithDependencies->getState() == ETaskState::FINISHED)
-                    {
-                        anyDependentTaskNeedsToBeRemoved = true;
-                        continue;
-                    }
-
-                    // update the dependent task's dependency set
-                    // if there are no more dependencies or the task was canceled, we need to update.
-                    anyDependentTaskNeedsToBeRemoved = taskWithDependencies->updateDependency(task->getTaskID())
-                                                         ? true
-                                                         : anyDependentTaskNeedsToBeRemoved;
-
-                    if (anyDependentTaskNeedsToBeRemoved && taskWithDependencies->getState() == ETaskState::WAITING)
-                    {
-                        // task dependencies were all fulfilled without having been canceled
-                        const std::lock_guard<std::mutex> LOCK(m_queueMutex);
-                        // the move leaves nullptr in m_tasksWithDependencies, will be cleaned up later
-                        m_taskQueue.push(std::move(taskWithDependencies));
-                        m_cvTaskReady.notify_one();
-                    }
-                }
+                result = true;
+                continue;
             }
 
-            if (anyDependentTaskNeedsToBeRemoved)
+            // update the dependent task's dependency set
+            // if there are no more dependencies or the task was canceled, we need to update.
+            result = taskWithDependencies->updateDependency(task->getTaskID()) ? true : result;
+
+            if (result && taskWithDependencies->getState() == ETaskState::WAITING)
             {
-                std::erase_if(
-                  m_tasksWithDependencies,
-                  [](const auto& taskWithDependencies)
-                  {
-                      // clean up the nullptr we left when moving to the task queue.
-                      return !taskWithDependencies
-                             || taskWithDependencies->getState() == ETaskState::CANCELED
-                             || taskWithDependencies->getState() == ETaskState::FAILED
-                             || taskWithDependencies->getState() == ETaskState::FINISHED;
-                  }
-                );
+                // task dependencies were all fulfilled without having been canceled
+                const std::lock_guard<std::mutex> LOCK(m_queueMutex);
+                // the move leaves nullptr in m_tasksWithDependencies, will be cleaned up later
+                m_taskQueue.push(std::move(taskWithDependencies));
+                m_cvTaskReady.notify_one();
             }
         }
+        return result;
+    }
+
+    auto updateDependentTasksQueueForFailedTask(const ITaskPtrType& task) -> bool
+    {
+        bool               result {false};
+        std::stack<TaskID> canceledTasks {};
+        canceledTasks.push(task->getTaskID());
+        while (!canceledTasks.empty())
+        {
+            TaskID canceledTask = std::move(canceledTasks.top());
+            canceledTasks.pop();
+
+            for (auto& taskWithDependencies : m_tasksWithDependencies)
+            {
+                if (taskWithDependencies->updateDependency(canceledTask))
+                {
+                    // task depended on the canceledTask and was canceled in turn.
+                    canceledTasks.push(taskWithDependencies->getTaskID());
+                    result = true;
+                }
+            }
+        }
+        return result;
     }
 
     std::priority_queue<ITaskPtrType, std::vector<ITaskPtrType>, ITaskPtrTypeComparator> m_taskQueue;

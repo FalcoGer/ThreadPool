@@ -2,6 +2,7 @@ module;
 
 #include <any>
 #include <concepts>
+#include <cstdint>
 #include <functional>
 #include <set>
 #include <stdexcept>
@@ -15,10 +16,9 @@ import :ITask;
 import :TaskID;
 import :TaskPriority;
 
-
-export namespace ThreadPool::InternalDetail
+namespace ThreadPool::InternalDetail
 {
-template <typename ReturnType, typename PromiseType, typename... ArgTypes>
+export template <typename ReturnType, typename PromiseType, typename... ArgTypes>
     requires (
       std::convertible_to<ReturnType, PromiseType> || std::is_void_v<PromiseType> || std::same_as<PromiseType, std::any>
     )
@@ -33,10 +33,10 @@ class Task : public ITask<PromiseType>
         requires std::regular_invocable<CallableType, ArgTypes...>
                    && std::same_as<std::invoke_result_t<CallableType, ArgTypes...>, ReturnType>
     Task(
-      const TaskID       TASK_ID,
-      const TaskPriority PRIORITY,
-      std::set<TaskID>&& dependencies,
-      CallableType&&     callable,
+      const std::uint32_t TASK_ID,
+      const TaskPriority  PRIORITY,
+      std::set<TaskID>&&  dependencies,
+      CallableType&&      callable,
       ArgTypes&&... args
     )
             : ITask<PromiseType> {TASK_ID, PRIORITY, std::move(dependencies)},
@@ -45,6 +45,7 @@ class Task : public ITask<PromiseType>
     {
         // empty
     }
+
     Task()                                          = delete;
     ~Task() override                                = default;
     Task(const Task& other)                         = delete;
@@ -104,5 +105,4 @@ class Task : public ITask<PromiseType>
         }
     }
 };
-
 }    // namespace ThreadPool::InternalDetail

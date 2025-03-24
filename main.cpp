@@ -1,5 +1,4 @@
 #include <any>
-#include <chrono>
 #include <numbers>
 #include <print>
 #include <set>
@@ -156,9 +155,9 @@ auto main() -> int
         auto            ticket = tp.enqueue(
           [](int& x) -> int
           {
-              std::this_thread::sleep_for(3s);
+              std::this_thread::sleep_for(1s);
               std::println("task1 done");
-              return x *= 2;
+              return x = 2;
           },
           x
         );
@@ -168,7 +167,7 @@ auto main() -> int
           deps,
           [](int x, int& y) -> int
           {
-              std::this_thread::sleep_for(3s);
+              std::this_thread::sleep_for(300ms);
               std::println("task2 done");
               return y = x + 1;
           },
@@ -179,9 +178,9 @@ auto main() -> int
           deps,
           [](int x, int& z) -> int
           {
-              std::this_thread::sleep_for(2s);
+              std::this_thread::sleep_for(200ms);
               std::println("task3 done");
-              return z = x / 4;
+              return z = x + 2;
           },
           x,
           z
@@ -194,7 +193,7 @@ auto main() -> int
           deps,
           [](int x, int y, int z) -> int
           {
-              std::this_thread::sleep_for(1s);
+              std::this_thread::sleep_for(100ms);
               std::println("task4 done");
               return x + y + z;
           },
@@ -203,11 +202,11 @@ auto main() -> int
           z
         );
 
-        std::println("ticket value = {}", ticket.get());
-        std::println("ticket2 value = {}", ticket2.get());
-        std::println("ticket3 value = {}", ticket3.get());
-        std::println("ticket4 value = {}", ticket4.get());
-        std::println("x = {}, y = {}, z = {}", x, y, z);
+        std::println("ticket value = {}, expected 2", ticket.get());
+        std::println("ticket2 value = {}, expected 3", ticket2.get());
+        std::println("ticket3 value = {}, expected 4", ticket3.get());
+        std::println("ticket4 value = {}, expected 2+3+4 = 9", ticket4.get());
+        std::println("x = {} (expected 2), y = {} (expected 3), z = {} (expected 4)", x, y, z);
     }
     {
         ThreadPool<void> tp {};

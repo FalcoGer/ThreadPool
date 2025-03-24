@@ -258,10 +258,11 @@ class ThreadPool
 
             // update the dependent task's dependency set
             // if there are no more dependencies or the task was canceled, we need to update.
-            result = taskWithDependencies->updateDependency(task->getTaskID()) ? true : result;
 
-            if (result && taskWithDependencies->getState() == ETaskState::WAITING)
+            if (taskWithDependencies->updateDependency(task->getTaskID())
+                && taskWithDependencies->getState() == ETaskState::WAITING)
             {
+                result = true;
                 // task dependencies were all fulfilled without having been canceled
                 const std::lock_guard<std::mutex> LOCK(m_queueMutex);
                 // the move leaves nullptr in m_tasksWithDependencies, will be cleaned up later

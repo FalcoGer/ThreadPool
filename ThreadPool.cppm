@@ -40,7 +40,7 @@ export template <typename PromiseType = std::any>
 class ThreadPool
 {
   private:
-    using ITaskPtrType = std::unique_ptr<InternalDetail::ITask<PromiseType>>;
+    using ITaskPtrType           = std::unique_ptr<InternalDetail::ITask<PromiseType>>;
     using ITaskPtrTypeComparator = InternalDetail::ITaskUniquePtrPriorityComparator<PromiseType>;
 
   public:
@@ -214,7 +214,7 @@ class ThreadPool
             // stack is used to recursively cancel tasks
             if (task->getState() == ETaskState::CANCELED || task->getState() == ETaskState::FAILED)
             {
-                std::stack<TaskID>                canceledTasks {};
+                std::stack<TaskID> canceledTasks {};
                 canceledTasks.push(task->getTaskID());
                 while (!canceledTasks.empty())
                 {
@@ -248,8 +248,8 @@ class ThreadPool
                     // update the dependent task's dependency set
                     // if there are no more dependencies or the task was canceled, we need to update.
                     anyDependentTaskNeedsToBeRemoved = taskWithDependencies->updateDependency(task->getTaskID())
-                                                          ? true
-                                                          : anyDependentTaskNeedsToBeRemoved;
+                                                         ? true
+                                                         : anyDependentTaskNeedsToBeRemoved;
 
                     if (anyDependentTaskNeedsToBeRemoved && taskWithDependencies->getState() == ETaskState::WAITING)
                     {

@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.28)
 project(ThreadPool VERSION 0.1.0 LANGUAGES C CXX)
 
-if (CMAKE_GENERATOR MATCHES "Ninja")
+if(CMAKE_GENERATOR MATCHES "Ninja")
     # Ensure Ninja is at least version 1.11
     execute_process(
         COMMAND ninja --version
         OUTPUT_VARIABLE NINJA_VERSION
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    if (NINJA_VERSION VERSION_LESS "1.11")
+    if(NINJA_VERSION VERSION_LESS "1.11")
         message(FATAL_ERROR "Ninja version >= 1.11 is required. Found: ${NINJA_VERSION}")
     endif()
 elseif(CMAKE_GENERATOR MATCHES "Visual Studio ([1-9][0-9]*)")
@@ -24,20 +24,20 @@ else()
 endif()
 
 # Check the compiler
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "16.0")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "16.0")
         message(FATAL_ERROR "Clang version >= 16.0 required!")
     endif()
     # check if CLANG_GCC_TOOLCHAIN_PATH is set
-    if (DEFINED CLANG_GCC_TOOLCHAIN_PATH)
+    if(DEFINED CLANG_GCC_TOOLCHAIN_PATH)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --gcc-toolchain=${CLANG_GCC_TOOLCHAIN_PATH}")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --gcc-toolchain=${CLANG_GCC_TOOLCHAIN_PATH}")
     endif()
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
         message(FATAL_ERROR "GCC version >= 14.0 required!")
     endif()
-elseif (MSVC_VERSION LESS 1734)
+elseif(MSVC_VERSION LESS 1734)
     message(FATAL_ERROR "MSVC version >= 17.34 is required. Found: ${MSVC_VERSION}")
 else()
     message(FATAL_ERROR "Unknown compiler: ${CMAKE_CXX_COMPILER_ID}!")
@@ -48,17 +48,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 add_library(ThreadPoolModule)
 target_sources(ThreadPoolModule
-  PUBLIC
-    FILE_SET cxx_modules TYPE CXX_MODULES FILES
-      ThreadPool-ETaskState.cppm
-      ThreadPool-TaskPriority.cppm
-      ThreadPool-TaskCanceled.cppm
-      ThreadPool-TaskID.cppm
-      ThreadPool-TaskTicket.cppm
-      ThreadPool-ITask.cppm
-      ThreadPool-ITaskUniquePtrPriorityComparator.cppm
-      ThreadPool-Task.cppm
-      ThreadPool.cppm
+    PUBLIC
+      FILE_SET cxx_modules TYPE CXX_MODULES FILES
+        ThreadPool-ETaskState.cppm
+        ThreadPool-TaskPriority.cppm
+        ThreadPool-TaskCanceled.cppm
+        ThreadPool-TaskID.cppm
+        ThreadPool-TaskTicket.cppm
+        ThreadPool-ITask.cppm
+        ThreadPool-ITaskUniquePtrPriorityComparator.cppm
+        ThreadPool-Task.cppm
+        ThreadPool.cppm
 )
 set_target_properties(ThreadPoolModule PROPERTIES CXX_SCAN_FOR_MODULES YES)
 

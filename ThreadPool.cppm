@@ -9,10 +9,12 @@ module;
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <ranges>
 #include <set>
 #include <stack>
 #include <stop_token>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 export module ThreadPool;
@@ -202,7 +204,7 @@ class ThreadPool
                 task = std::move(const_cast<ITaskPtrType&>(m_taskQueue.top()));
                 m_taskQueue.pop();
             }
-            if (task->getState() == ETaskState::WAITING)
+            if (task->getState() == ETaskState::PENDING)
             {
                 task->run();
             }
@@ -259,7 +261,7 @@ class ThreadPool
             // if there are no more dependencies or the task was canceled, we need to update.
 
             if (taskWithDependencies->updateDependency(task->getTaskID())
-                && taskWithDependencies->getState() == ETaskState::WAITING)
+                && taskWithDependencies->getState() == ETaskState::PENDING)
             {
                 result = true;
                 // task dependencies were all fulfilled without having been canceled

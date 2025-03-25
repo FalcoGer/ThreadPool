@@ -30,7 +30,7 @@ export class TaskID
         }
     }
 
-    void setStarted() noexcept { m_taskState->store(ETaskState::STARTED); }
+    void setRunning() noexcept { m_taskState->store(ETaskState::RUNNING); }
     void setFinished() noexcept { m_taskState->store(ETaskState::FINISHED); }
     void setCanceled() noexcept { m_taskState->store(ETaskState::CANCELED); }
     void setFailed() noexcept { m_taskState->store(ETaskState::FAILED); }

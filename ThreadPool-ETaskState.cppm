@@ -6,5 +6,5 @@ export module ThreadPool:ETaskState;
 
 namespace ThreadPool
 {
-export enum class ETaskState : std::uint8_t { WAITING = 0, STARTED, FINISHED, FAILED, CANCELED };
+export enum class ETaskState : std::uint8_t { PENDING = 0, RUNNING, FINISHED, FAILED, CANCELED };
 }    // namespace ThreadPool

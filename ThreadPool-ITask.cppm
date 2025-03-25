@@ -45,7 +45,7 @@ class ITask : public TaskID
     }
 
     explicit ITask(const std::uint32_t TASK_ID, const TaskPriority PRIORITY, std::set<TaskID>&& dependencies)
-            : TaskID {TASK_ID, std::make_shared<std::atomic<ETaskState>>(ETaskState::WAITING)},
+            : TaskID {TASK_ID, std::make_shared<std::atomic<ETaskState>>(ETaskState::PENDING)},
               m_priority(PRIORITY),
               m_dependencies(std::move(dependencies))
     {

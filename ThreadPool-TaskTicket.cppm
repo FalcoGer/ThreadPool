@@ -135,8 +135,8 @@ struct std::formatter<ThreadPool::TaskTicket<PromiseType>>
         {
             switch (ticket.getState())
             {
-                case ThreadPool::ETaskState::WAITING:  status = "Pending"; break;
-                case ThreadPool::ETaskState::STARTED:  status = "Running"; break;
+                case ThreadPool::ETaskState::PENDING:  status = "Pending"; break;
+                case ThreadPool::ETaskState::RUNNING:  status = "Running"; break;
                 case ThreadPool::ETaskState::FINISHED: status = "Finished"; break;
                 case ThreadPool::ETaskState::FAILED:   status = "Failed"; break;
                 case ThreadPool::ETaskState::CANCELED: status = "Canceled"; break;

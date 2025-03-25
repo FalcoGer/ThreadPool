@@ -1,4 +1,6 @@
 #include <any>
+#include <chrono>
+#include <functional>
 #include <numbers>
 #include <print>
 #include <set>
@@ -7,6 +9,29 @@
 #include <vector>
 
 import ThreadPool;
+
+namespace
+{
+struct WorkStruct
+{
+    auto operator() (int x, int y) const -> int
+    {
+        // NOLINTNEXTLINE(readability-magic-numbers) // example code
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        return x * y;
+    }
+};
+
+auto function(int x, int y) -> int
+{
+    return x - y;
+}
+
+auto function2(int x, int y) -> int
+{
+    return static_cast<int>(static_cast<unsigned int>(x) << static_cast<unsigned int>(y));
+}
+}    // namespace
 
 auto main() -> int
 {
@@ -31,7 +56,8 @@ auto main() -> int
         // task is done.
 
         // return type: int
-        auto l2      = [a = 42](const float b, const double c) -> int { return static_cast<int>(a + (static_cast<double>(b) * c)); };
+        auto l2      = [a = 42](const float b, const double c) -> int
+        { return static_cast<int>(a + (static_cast<double>(b) * c)); };
         auto ticket2 = tp.enqueue(l2, 3.14F, 6.9);
         auto ticket3 = tp.enqueue(l2, 1.23, 4.56);
 
@@ -48,6 +74,25 @@ auto main() -> int
         ticket4.get<void>();    // block until done, waiting for the lambda to modify x
         // access to x is now safe again.
         std::println("expecting x == 3, got x == {}", x);
+    }
+    {
+        ThreadPool<int>                    tp {};
+        const auto                         lambda = [](int x, int y) -> int { return x + y; };
+        const WorkStruct                   callableObject {};
+        const std::function<int(int, int)> stdfunction {[](int x, int y) -> int { return x / y; }};
+        int (*fptr)(int, int) = function2;
+
+        auto ticket1          = tp.enqueue(lambda, 2, 3);            // 2+3
+        auto ticket2          = tp.enqueue(callableObject, 2, 3);    // 2*3
+        auto ticket3          = tp.enqueue(stdfunction, 2, 3);       // 2/3
+        auto ticket4          = tp.enqueue(function, 2, 3);          // 2-3
+        auto ticket5          = tp.enqueue(fptr, 2, 3);              // 2>>3
+
+        std::println("2+3  = {}", ticket1.get());
+        std::println("2*3  = {}", ticket2.get());
+        std::println("2/3  = {}", ticket3.get());
+        std::println("2-3  = {}", ticket4.get());
+        std::println("2<<3 = {}", ticket5.get());
     }
     {
         ThreadPool tp {2};

@@ -16,7 +16,8 @@ namespace ThreadPool
 {
 namespace InternalDetail
 {
-    export template <typename PromiseType>
+    // forward declaration. not exported as it is internal
+    template <typename PromiseType>
     class ITask;
 }
 

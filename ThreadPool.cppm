@@ -23,16 +23,9 @@ export import :TaskID;
 export import :TaskPriority;
 export import :TaskTicket;
 
-#ifndef __clang__
-#  warning "Exporting internal module partitions because gcc errors otherwise"
 export import :ITask;
 export import :Task;
 export import :ITaskUniquePtrPriorityComparator;
-#else
-import :ITask;
-import :Task;
-import :ITaskUniquePtrPriorityComparator;
-#endif
 
 namespace ThreadPool
 {

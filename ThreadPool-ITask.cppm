@@ -18,7 +18,8 @@ import :TaskCanceled;
 
 namespace ThreadPool::InternalDetail
 {
-export template <typename PromiseType>
+// no export, this is internal
+template <typename PromiseType>
 class ITask : public TaskID
 {
   private:

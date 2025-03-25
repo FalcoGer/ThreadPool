@@ -18,7 +18,8 @@ import :TaskPriority;
 
 namespace ThreadPool::InternalDetail
 {
-export template <typename ReturnType, typename PromiseType, typename... ArgTypes>
+// no export, this is internal
+template <typename ReturnType, typename PromiseType, typename... ArgTypes>
     requires (
       std::convertible_to<ReturnType, PromiseType> || std::is_void_v<PromiseType> || std::same_as<PromiseType, std::any>
     )

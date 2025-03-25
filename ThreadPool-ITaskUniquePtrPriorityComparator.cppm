@@ -8,7 +8,8 @@ import :ITask;
 
 namespace ThreadPool::InternalDetail
 {
-export template <typename PromiseType>
+// no export, this is internal
+template <typename PromiseType>
 struct ITaskUniquePtrPriorityComparator
 {
     [[nodiscard]]

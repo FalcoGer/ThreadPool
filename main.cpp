@@ -31,7 +31,7 @@ auto main() -> int
         // task is done.
 
         // return type: int
-        auto l2      = [a = 42](const float b, const double c) -> int { return static_cast<int>(a + (b * c)); };
+        auto l2      = [a = 42](const float b, const double c) -> int { return static_cast<int>(a + (static_cast<double>(b) * c)); };
         auto ticket2 = tp.enqueue(l2, 3.14F, 6.9);
         auto ticket3 = tp.enqueue(l2, 1.23, 4.56);
 
@@ -153,11 +153,11 @@ auto main() -> int
         int             y {};
         int             z {};
         auto            ticket = tp.enqueue(
-          [](int& x) -> int
+          [](int& lx) -> int
           {
               std::this_thread::sleep_for(1s);
               std::println("task1 done");
-              return x = 2;
+              return lx = 2;
           },
           x
         );
@@ -165,22 +165,22 @@ auto main() -> int
         deps.insert(ticket.getTaskID());
         auto ticket2 = tp.enqueueWithDependencies(
           deps,
-          [](int x, int& y) -> int
+          [](int lx, int& ly) -> int
           {
               std::this_thread::sleep_for(300ms);
               std::println("task2 done");
-              return y = x + 1;
+              return ly = lx + 1;
           },
           x,
           y
         );
         auto ticket3 = tp.enqueueWithDependencies(
           deps,
-          [](int x, int& z) -> int
+          [](int lx, int& lz) -> int
           {
               std::this_thread::sleep_for(200ms);
               std::println("task3 done");
-              return z = x + 2;
+              return lz = lx + 2;
           },
           x,
           z
@@ -191,11 +191,11 @@ auto main() -> int
 
         auto ticket4 = tp.enqueueWithDependencies(
           deps,
-          [](int x, int y, int z) -> int
+          [](int lx, int ly, int lz) -> int
           {
               std::this_thread::sleep_for(100ms);
               std::println("task4 done");
-              return x + y + z;
+              return lx + ly + lz;
           },
           x,
           y,

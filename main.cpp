@@ -1,9 +1,9 @@
 #include <any>
 #include <chrono>
 #include <functional>
+#include <initializer_list>
 #include <numbers>
 #include <print>
-#include <set>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -80,13 +80,13 @@ auto main() -> int
         const auto                         lambda = [](int x, int y) -> int { return x + y; };
         const WorkStruct                   callableObject {};
         const std::function<int(int, int)> stdfunction {[](int x, int y) -> int { return x / y; }};
-        int (*fptr)(int, int) = function2;
+        int (*const fptr)(int, int) = function2;
 
-        auto ticket1          = tp.enqueue(lambda, 2, 3);            // 2+3
-        auto ticket2          = tp.enqueue(callableObject, 2, 3);    // 2*3
-        auto ticket3          = tp.enqueue(stdfunction, 2, 3);       // 2/3
-        auto ticket4          = tp.enqueue(function, 2, 3);          // 2-3
-        auto ticket5          = tp.enqueue(fptr, 2, 3);              // 2>>3
+        auto ticket1                = tp.enqueue(lambda, 2, 3);            // 2+3
+        auto ticket2                = tp.enqueue(callableObject, 2, 3);    // 2*3
+        auto ticket3                = tp.enqueue(stdfunction, 2, 3);       // 2/3
+        auto ticket4                = tp.enqueue(function, 2, 3);          // 2-3
+        auto ticket5                = tp.enqueue(fptr, 2, 3);              // 2<<3
 
         std::println("2+3  = {}", ticket1.get());
         std::println("2*3  = {}", ticket2.get());
@@ -206,10 +206,9 @@ auto main() -> int
           },
           x
         );
-        std::set<TaskID> deps;
-        deps.insert(ticket.getTaskID());
+
         auto ticket2 = tp.enqueueWithDependencies(
-          deps,
+          std::initializer_list<TaskID> {ticket.getTaskID()},
           [](int lx, int& ly) -> int
           {
               std::this_thread::sleep_for(300ms);
@@ -220,7 +219,7 @@ auto main() -> int
           y
         );
         auto ticket3 = tp.enqueueWithDependencies(
-          deps,
+          std::initializer_list<TaskID> {ticket.getTaskID()},
           [](int lx, int& lz) -> int
           {
               std::this_thread::sleep_for(200ms);
@@ -230,12 +229,9 @@ auto main() -> int
           x,
           z
         );
-        deps.clear();
-        deps.insert(ticket2.getTaskID());
-        deps.insert(ticket3.getTaskID());
 
         auto ticket4 = tp.enqueueWithDependencies(
-          deps,
+          std::initializer_list<TaskID> {ticket2.getTaskID(), ticket3.getTaskID()},
           [](int lx, int ly, int lz) -> int
           {
               std::this_thread::sleep_for(100ms);
@@ -262,20 +258,18 @@ auto main() -> int
               throw std::runtime_error("Task Failed");
           }
         );
-        std::set<TaskID> deps {};
-        deps.insert(ticket1.getTaskID());
+
         auto ticket2 = tp.enqueueWithDependencies(
-          deps,
+          std::initializer_list<TaskID> {ticket1.getTaskID()},
           []()
           {
               std::this_thread::sleep_for(3s);
               std::println("Task2 depending on 1 done");
           }
         );
-        std::set<TaskID> deps2 {};
-        deps2.insert(ticket2.getTaskID());
+
         auto ticket3 = tp.enqueueWithDependencies(
-          deps2,
+          std::initializer_list<TaskID> {ticket2.getTaskID()},
           []()
           {
               std::this_thread::sleep_for(3s);
@@ -284,7 +278,7 @@ auto main() -> int
         );
         std::this_thread::sleep_for(500ms);    // let task0 fail before adding task depending on it
         auto ticket4 = tp.enqueueWithDependencies(
-          deps,
+          std::initializer_list<TaskID> {ticket1.getTaskID()},
           []()
           {
               std::this_thread::sleep_for(1s);

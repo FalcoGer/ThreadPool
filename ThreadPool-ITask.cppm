@@ -20,7 +20,7 @@ namespace ThreadPool::InternalDetail
 {
 // no export, this is internal
 template <typename PromiseType>
-class ITask : public TaskID
+class ITask : protected TaskID
 {
   private:
     std::promise<PromiseType>         m_promise;
@@ -103,6 +103,12 @@ class ITask : public TaskID
     auto getFuture() noexcept -> std::future<PromiseType>
     {
         return m_promise.get_future();
+    }
+
+    [[nodiscard]]
+    auto getState() const noexcept -> ETaskState
+    {
+        return TaskID::getState();
     }
 
     [[nodiscard]]

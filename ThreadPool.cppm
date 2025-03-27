@@ -265,9 +265,11 @@ class ThreadPool
             {
                 result = true;
                 // task dependencies were all fulfilled without having been canceled
-                const std::lock_guard<std::mutex> LOCK(m_queueMutex);
-                // the move leaves nullptr in m_tasksWithDependencies, will be cleaned up later
-                m_taskQueue.push(std::move(taskWithDependencies));
+                {
+                    const std::lock_guard<std::mutex> LOCK(m_queueMutex);
+                    // the move leaves nullptr in m_tasksWithDependencies, will be cleaned up later
+                    m_taskQueue.push(std::move(taskWithDependencies));
+                }
                 m_cvTaskReady.notify_one();
             }
         }

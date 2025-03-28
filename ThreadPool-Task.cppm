@@ -19,6 +19,18 @@ import :TaskPriority;
 namespace ThreadPool::InternalDetail
 {
 // no export, this is internal
+
+/// @class Task
+/// @brief Represents a task that can be executed in the thread pool.
+///
+/// This class represents a task that can be executed in the thread pool.
+/// It is used internally by the thread pool to manage and execute tasks.
+///
+/// @tparam ReturnType type of the return value of the task
+/// @tparam PromiseType type of the value returned through the future
+/// @tparam ArgTypes types of the arguments passed to the task
+///
+/// @note This class is non-copyable
 template <typename ReturnType, typename PromiseType, typename... ArgTypes>
     requires (
       std::convertible_to<ReturnType, PromiseType> || std::is_void_v<PromiseType> || std::same_as<PromiseType, std::any>
@@ -30,6 +42,15 @@ class Task : public ITask<PromiseType>
     std::tuple<ArgTypes...>                m_args;
 
   public:
+    /// @brief Constructor for Task.
+    ///
+    /// Constructs a Task with the given function, arguments, and dependencies.
+    ///
+    /// @param TASK_ID the ID of the task
+    /// @param PRIORITY the priority of the task
+    /// @param dependencies the dependencies of the task
+    /// @param callable the function to be executed
+    /// @param args the arguments to be passed to the function
     template <typename CallableType>
         requires std::regular_invocable<CallableType, ArgTypes...>
                    && std::same_as<std::invoke_result_t<CallableType, ArgTypes...>, ReturnType>
@@ -54,6 +75,23 @@ class Task : public ITask<PromiseType>
     Task(Task&& other) noexcept                     = default;
     auto operator= (Task&& other) noexcept -> Task& = default;
 
+    /// @brief Execute the task.
+    ///
+    /// This function is called by the thread pool to execute the task.
+    /// It is not intended to be called directly by the user.
+    ///
+    /// If the task is already running or finished, this function
+    /// throws a `std::runtime_error`.
+    ///
+    /// The task's state is changed to `ETaskState::RUNNING` before
+    /// execution and to `ETaskState::FINISHED` or `ETaskState::FAILED`
+    /// after execution, depending on whether an exception was thrown.
+    ///
+    /// If the task's return type is `void`, the promise is either set
+    /// to either `std::any{}` or `void` depending on the promise type.
+    /// If the promise type is not `void` or `std::any`, the return
+    /// value of the task is cast to `PromiseType` and set to the
+    /// promise.
     void run() override
     {
         if (this->getState() != ETaskState::PENDING)

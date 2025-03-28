@@ -31,6 +31,13 @@ export import :ITaskUniquePtrPriorityComparator;
 
 namespace ThreadPool
 {
+/// @class ThreadPool
+/// @brief A thread pool for executing tasks.
+///
+/// This class implements a thread pool for executing tasks.
+/// Tasks are executed in the order of their priority.
+/// @tparam PromiseType type of the result of the tasks
+/// @note Objects of this type can not be moved or copied.
 export template <typename PromiseType = std::any>
 class ThreadPool
 {
@@ -39,8 +46,17 @@ class ThreadPool
     using ITaskPtrTypeComparator = InternalDetail::ITaskUniquePtrPriorityComparator<PromiseType>;
 
   public:
+    /// @brief Constructs a ThreadPool with the specified number of threads.
+    ///
+    /// @param NUM_THREADS number of threads in the thread pool.
+    /// The default value is std::thread::hardware_concurrency()
     explicit ThreadPool(const std::size_t NUM_THREADS = std::thread::hardware_concurrency()) { resize(NUM_THREADS); }
 
+    /// @brief Stop all threads and block until all tasks have finished.
+    ///
+    /// This function requests all threads to stop and then blocks until all tasks have finished.
+    /// The thread pool is empty after this call.
+    /// @note This function does not throw and is marked with @c noexcept
     void shutdownAndWait() noexcept
     {
         {
@@ -54,6 +70,16 @@ class ThreadPool
         m_threads.clear();
     }
 
+    /// @brief Adjusts the number of threads in the thread pool.
+    ///
+    /// This function increases or decreases the number of threads in the thread pool
+    /// based on the specified `NUM_THREADS`. If `NUM_THREADS` is greater than the
+    /// current number of threads, new threads are added. If `NUM_THREADS` is less,
+    /// excess threads are requested to stop and subsequently removed. If `NUM_THREADS`
+    /// is equal to the current number of threads, no action is taken.
+    ///
+    /// @param NUM_THREADS The desired number of threads in the thread pool.
+    /// @note If removed threads are running tasks, this will block until they are done.
     void resize(const std::size_t NUM_THREADS)
     {
         if (NUM_THREADS > m_threads.size())
@@ -82,14 +108,31 @@ class ThreadPool
         }
     }
 
+    /// @brief Get the number of threads in the thread pool.
+    ///
+    /// This function returns the current number of threads active in the thread pool.
+    ///
+    /// @return The number of threads in the thread pool.
+    /// @note This function does not throw and is marked with @c noexcept.
+
     [[nodiscard]]
     auto threadCount() const noexcept -> std::size_t
     {
+        const std::lock_guard LOCK(m_queueMutex);
         return m_threads.size();
     }
 
     ~ThreadPool() { shutdownAndWait(); }
 
+    /// @brief Enqueue a task to be executed.
+    ///
+    /// This function enqueues a task to be executed in the thread pool.
+    /// The task is queued with a priority of 0 and no dependencies.
+    ///
+    /// @param callable Callable object to be executed.
+    /// @param args Arguments to be passed to the callable.
+    ///
+    /// @return A @ref TaskTicket that can be used to retrieve the result of the task.
     template <typename CallableType, typename... ArgTypes>
         requires std::regular_invocable<CallableType, ArgTypes...>
     [[nodiscard]]
@@ -99,6 +142,17 @@ class ThreadPool
           TaskPriority {0}, std::set<TaskID> {}, std::forward<CallableType>(callable), std::forward<ArgTypes>(args)...
         );
     }
+
+    /// @brief Enqueue a task with a specified priority to be executed.
+    ///
+    /// This function enqueues a task to be executed in the thread pool with a given priority.
+    /// The task is queued without any dependencies.
+    ///
+    /// @param PRIORITY The priority of the task. Higher values indicate higher priority.
+    /// @param callable Callable object to be executed.
+    /// @param args Arguments to be passed to the callable.
+    ///
+    /// @return A @ref TaskTicket that can be used to retrieve the result of the task.
 
     template <typename CallableType, typename... ArgTypes>
         requires std::regular_invocable<CallableType, ArgTypes...>
@@ -111,6 +165,16 @@ class ThreadPool
         );
     }
 
+    /// @brief Enqueue a task with dependencies to be executed.
+    ///
+    /// This function enqueues a task to be executed in the thread pool with a given set of dependencies.
+    /// The task is queued with a priority of 0.
+    ///
+    /// @param dependencies A set of task IDs that must be finished before the task can be executed.
+    /// @param callable Callable object to be executed.
+    /// @param args Arguments to be passed to the callable.
+    ///
+    /// @return A @ref TaskTicket that can be used to retrieve the result of the task.
     template <typename CallableType, typename... ArgTypes>
         requires std::regular_invocable<CallableType, ArgTypes...>
     [[nodiscard]]
@@ -126,6 +190,17 @@ class ThreadPool
         );
     }
 
+    /// @brief Enqueue a task with a given priority and dependencies to be executed.
+    ///
+    /// This function enqueues a task to be executed in the thread pool with a given set of dependencies.
+    /// The task is queued with the given priority.
+    ///
+    /// @param PRIORITY The priority with which the task should be executed.
+    /// @param dependencies A set of task IDs that must be finished before the task can be executed.
+    /// @param callable Callable object to be executed.
+    /// @param args Arguments to be passed to the callable.
+    ///
+    /// @return A @ref TaskTicket that can be used to retrieve the result of the task.
     template <typename CallableType, typename... ArgTypes>
         requires std::regular_invocable<CallableType, ArgTypes...>
     [[nodiscard]]
@@ -181,6 +256,12 @@ class ThreadPool
     auto operator= (ThreadPool&&) -> ThreadPool&      = delete;
 
   private:
+    /// @brief This function is called by each thread in the thread pool.
+    ///
+    /// It runs until the thread pool is stopped (i.e., the stop token is triggered).
+    /// The function waits until a task is available, then runs it.
+    ///
+    /// @param stop A stop token that can be used to stop this runner from getting more tasks.
     void runner(const std::stop_token& stop)
     {
         while (!stop.stop_requested())
@@ -213,6 +294,11 @@ class ThreadPool
         }
     }
 
+    /// @brief Updates the m_tasksWithDependencies vector based on the given task.
+    ///
+    /// If the task is finished, tasks that depend on the task are updated.
+    /// If the task is canceled or failed, all dependent tasks are canceled as well.
+    /// Tasks that are finished, canceled, or failed are removed from m_tasksWithDependencies.
     void updateDependentTasksQueue(const ITaskPtrType& task)
     {
         bool                              anyDependentTaskNeedsToBeRemoved {false};
@@ -244,6 +330,11 @@ class ThreadPool
         }
     }
 
+    /// @brief Updates the m_tasksWithDependencies vector when a task is finished.
+    ///
+    /// Goes through all dependent tasks and updates their state.
+    /// If a tasks dependencies are fulfilled it is moved to the task queue for execution.
+    /// @returns true if the dependen tasks vector need updating.
     auto updateDependentTasksQueueForFinishedTask(const ITaskPtrType& task) -> bool
     {
         bool result {false};
@@ -276,6 +367,12 @@ class ThreadPool
         return result;
     }
 
+
+    /// @brief Updates the m_tasksWithDependencies vector when a task failed.
+    ///
+    /// Goes through all dependent tasks and cancels them recursively
+    /// if they depend on the task that failed.
+    /// @returns true if the dependen tasks vector need updating.
     auto updateDependentTasksQueueForFailedTask(const ITaskPtrType& task) -> bool
     {
         bool               result {false};

@@ -129,12 +129,17 @@ class TaskTicket
     /// If the task throws an exception, the exception is rethrown.
     ///
     /// @returns The result of the task.
+    /// @throws @c std::runtime_error if the future is not valid.
     /// @throws Whatever the task throws.
     /// @note This function does not throw if the task does not throw.
     [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
     auto get() -> PromiseType
         requires (!std::is_void_v<PromiseType>)
     {
+        if (!m_future.valid())
+        {
+            throw std::runtime_error("Future not valid");
+        }
         return m_future.get();
     }
 
@@ -144,11 +149,17 @@ class TaskTicket
     /// The method blocks until the task is ready.
     /// If the task throws an exception, the exception is rethrown.
     ///
+    /// @throws @c std::runtime_error if the future is not valid.
+    /// @throws Whatever the task throws.
     /// @note This overload is only available if the `PromiseType` is `void`.
     ///       No value is returned, and the result of the task is discarded.
     void get()
         requires std::is_void_v<PromiseType>
     {
+        if (!m_future.valid())
+        {
+            throw std::runtime_error("Future not valid");
+        }
         m_future.get();
     }
 
@@ -161,12 +172,17 @@ class TaskTicket
     /// @returns The result of the task casted to `T`.
     ///
     /// @throws std::bad_any_cast if the cast to `T` fails.
+    /// @throws @c std::runtime_error if the future is not valid.
     /// @throws Whatever the task throws.
     template <typename T>
         requires std::same_as<PromiseType, std::any> && (!std::same_as<T, std::any>) && (!std::is_void_v<T>)
     [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
     auto get() -> T
     {
+        if (!m_future.valid())
+        {
+            throw std::runtime_error("Future not valid");
+        }
         // PromiseType is any, and T is not any or void.
         return std::any_cast<T>(m_future.get());
     }
@@ -182,12 +198,17 @@ class TaskTicket
     ///
     /// @returns The result of the task as type `T`.
     ///
+    /// @throws @c std::runtime_error if the future is not valid.
     /// @throws Whatever the task throws.
     template <typename T>
         requires std::same_as<PromiseType, T> && (!std::is_void_v<T>)
     [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
     auto get() -> T
     {
+        if (!m_future.valid())
+        {
+            throw std::runtime_error("Future not valid");
+        }
         // T is the same as PromiseType, neither is void
         return m_future.get();
     }
@@ -198,12 +219,17 @@ class TaskTicket
     /// The method blocks until the task is ready.
     /// If the task throws an exception, the exception is rethrown.
     ///
+    /// @throws @c std::runtime_error if the future is not valid.
     /// @note This overload is only available if `T` is `void`.
     ///       No value is returned, and the result of the task is discarded.
     template <typename T>
         requires std::is_void_v<T>
     void get()
     {
+        if (!m_future.valid())
+        {
+            throw std::runtime_error("Future not valid");
+        }
         m_future.get();
     }
 };

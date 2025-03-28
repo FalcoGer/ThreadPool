@@ -131,7 +131,7 @@ class TaskTicket
     /// @returns The result of the task.
     /// @throws @c std::runtime_error if the future is not valid.
     /// @throws Whatever the task throws.
-    /// @note This function does not throw if the task does not throw.
+    /// @note This function is not thread safe as the future can become invalid after the check.
     [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
     auto get() -> PromiseType
         requires (!std::is_void_v<PromiseType>)
@@ -153,6 +153,7 @@ class TaskTicket
     /// @throws Whatever the task throws.
     /// @note This overload is only available if the `PromiseType` is `void`.
     ///       No value is returned, and the result of the task is discarded.
+    /// @note This function is not thread safe as the future can become invalid after the check.
     void get()
         requires std::is_void_v<PromiseType>
     {
@@ -174,6 +175,7 @@ class TaskTicket
     /// @throws std::bad_any_cast if the cast to `T` fails.
     /// @throws @c std::runtime_error if the future is not valid.
     /// @throws Whatever the task throws.
+    /// @note This function is not thread safe as the future can become invalid after the check.
     template <typename T>
         requires std::same_as<PromiseType, std::any> && (!std::same_as<T, std::any>) && (!std::is_void_v<T>)
     [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
@@ -200,6 +202,7 @@ class TaskTicket
     ///
     /// @throws @c std::runtime_error if the future is not valid.
     /// @throws Whatever the task throws.
+    /// @note This function is not thread safe as the future can become invalid after the check.
     template <typename T>
         requires std::same_as<PromiseType, T> && (!std::is_void_v<T>)
     [[nodiscard("Use the value or call get<void>() to discard the value explicitly.")]]
@@ -222,6 +225,7 @@ class TaskTicket
     /// @throws @c std::runtime_error if the future is not valid.
     /// @note This overload is only available if `T` is `void`.
     ///       No value is returned, and the result of the task is discarded.
+    /// @note This function is not thread safe as the future can become invalid after the check.
     template <typename T>
         requires std::is_void_v<T>
     void get()

@@ -4,7 +4,7 @@ module;
 #include <concepts>
 #include <cstdint>
 #include <functional>
-#include <set>
+#include <ranges>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
@@ -55,13 +55,13 @@ class Task : public ITask<PromiseType>
         requires std::regular_invocable<CallableType, ArgTypes...>
                    && std::same_as<std::invoke_result_t<CallableType, ArgTypes...>, ReturnType>
     Task(
-      const std::uint32_t TASK_ID,
-      const TaskPriority  PRIORITY,
-      std::set<TaskID>&&  dependencies,
-      CallableType&&      callable,
+      const std::uint32_t       TASK_ID,
+      const TaskPriority        PRIORITY,
+      std::ranges::range auto&& dependencies,
+      CallableType&&            callable,
       ArgTypes&&... args
     )
-            : ITask<PromiseType> {TASK_ID, PRIORITY, std::move(dependencies)},
+            : ITask<PromiseType> {TASK_ID, PRIORITY, std::forward<decltype(dependencies)>(dependencies)},
               m_function {std::forward<CallableType>(callable)},
               m_args {std::forward<ArgTypes>(args)...}
     {

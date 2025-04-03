@@ -170,7 +170,7 @@ class ThreadPool
     /// This function enqueues a task to be executed in the thread pool with a given set of dependencies.
     /// The task is queued with a priority of 0.
     ///
-    /// @param dependencies A set of task IDs that must be finished before the task can be executed.
+    /// @param dependencies Some @ref TaskID range that must be finished before the task can be executed.
     /// @param callable Callable object to be executed.
     /// @param args Arguments to be passed to the callable.
     ///
@@ -178,9 +178,8 @@ class ThreadPool
     template <typename CallableType, typename... ArgTypes>
         requires std::regular_invocable<CallableType, ArgTypes...>
     [[nodiscard]]
-    auto enqueueWithDependencies(
-      std::convertible_to<std::set<TaskID>> auto&& dependencies, CallableType&& callable, ArgTypes&&... args
-    ) -> TaskTicket<PromiseType>
+    auto enqueueWithDependencies(std::ranges::range auto&& dependencies, CallableType&& callable, ArgTypes&&... args)
+      -> TaskTicket<PromiseType>
     {
         return enqueueWithPriorityAndDependencies(
           TaskPriority {0},
@@ -196,7 +195,7 @@ class ThreadPool
     /// The task is queued with the given priority.
     ///
     /// @param PRIORITY The priority with which the task should be executed.
-    /// @param dependencies A set of task IDs that must be finished before the task can be executed.
+    /// @param dependencies Some @ref TaskID range that must be finished before the task can be executed.
     /// @param callable Callable object to be executed.
     /// @param args Arguments to be passed to the callable.
     ///
@@ -205,10 +204,7 @@ class ThreadPool
         requires std::regular_invocable<CallableType, ArgTypes...>
     [[nodiscard]]
     auto enqueueWithPriorityAndDependencies(
-      const TaskPriority                           PRIORITY,
-      std::convertible_to<std::set<TaskID>> auto&& dependencies,
-      CallableType&&                               callable,
-      ArgTypes&&... args
+      const TaskPriority PRIORITY, std::ranges::range auto&& dependencies, CallableType&& callable, ArgTypes&&... args
     ) -> TaskTicket<PromiseType>
     {
         using ReturnType = std::invoke_result_t<CallableType, ArgTypes...>;
@@ -225,7 +221,7 @@ class ThreadPool
         auto                              task = std::make_unique<TaskType>(
           m_taskCounter++,
           PRIORITY,
-          std::set<TaskID> {std::forward<decltype(dependencies)>(dependencies)},
+          std::forward<decltype(dependencies)>(dependencies),
           std::forward<CallableType>(callable),
           std::forward<ArgTypes>(args)...
         );

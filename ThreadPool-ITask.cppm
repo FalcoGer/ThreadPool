@@ -6,6 +6,7 @@ module;
 #include <future>
 #include <mutex>
 #include <optional>
+#include <ranges>
 #include <set>
 
 export module ThreadPool:ITask;
@@ -68,10 +69,28 @@ class ITask : protected TaskID
     /// @param TASK_ID The task ID for the newly constructed task.
     /// @param PRIORITY The priority for the newly constructed task.
     /// @param dependencies The dependencies for the newly constructed task.
-    explicit ITask(const std::uint32_t TASK_ID, const TaskPriority PRIORITY, std::set<TaskID>&& dependencies)
+    explicit ITask(const std::uint32_t TASK_ID, const TaskPriority PRIORITY, std::ranges::range auto&& dependencies)
+        requires std::convertible_to<decltype(dependencies), decltype(m_dependencies)>
             : TaskID {TASK_ID, std::make_shared<std::atomic<ETaskState>>(ETaskState::PENDING)},
               m_priority(PRIORITY),
-              m_dependencies(std::move(dependencies))
+              m_dependencies(std::forward<decltype(dependencies)>(dependencies))
+    {
+        updateDependencies();
+    }
+
+    /// @brief Constructor for ITask.
+    ///
+    /// This constructor initializes the task's task ID, priority, and dependencies.
+    /// The task's state is set to PENDING.
+    ///
+    /// @param TASK_ID The task ID for the newly constructed task.
+    /// @param PRIORITY The priority for the newly constructed task.
+    /// @param dependencies The dependencies for the newly constructed task.
+    explicit ITask(const std::uint32_t TASK_ID, const TaskPriority PRIORITY, std::ranges::range auto&& dependencies)
+        requires (!std::convertible_to<decltype(dependencies), decltype(m_dependencies)>)
+            : TaskID {TASK_ID, std::make_shared<std::atomic<ETaskState>>(ETaskState::PENDING)},
+              m_priority(PRIORITY),
+              m_dependencies(std::ranges::begin(dependencies), std::ranges::end(dependencies))
     {
         updateDependencies();
     }

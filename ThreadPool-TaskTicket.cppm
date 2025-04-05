@@ -1,6 +1,7 @@
 module;
 
 #include <any>
+#include <chrono>
 #include <format>
 #include <functional>
 #include <future>

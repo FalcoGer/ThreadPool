@@ -59,7 +59,7 @@ auto main() -> int
         auto l2      = [a = 42](const float b, const double c) -> int
         { return static_cast<int>(a + (static_cast<double>(b) * c)); };
         auto ticket2 = tp.enqueue(l2, 3.14F, 6.9);
-        auto ticket3 = tp.enqueue(l2, 1.23, 4.56);
+        auto ticket3 = tp.enqueue(l2, 1.23F, 4.56);
 
         // return type void, we take a reference though.
         auto l4      = [](int& ref) { ref++; };

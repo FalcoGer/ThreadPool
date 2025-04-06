@@ -215,7 +215,9 @@ class ThreadPool
         // fulfilled this is done in the new task's constructor
         // locks are kept until the task is in either the task queue or the tasks with dependencies queue
         // or canceled.
-        const std::scoped_lock LOCK{m_taskQueue, m_tasksWithDependencies};
+        // new tasks aren't executed and dependencies not updated with m_tasksWithDependencies locked, so we can
+        // take our time checking dependent tasks here
+        const std::scoped_lock _{m_taskQueue, m_tasksWithDependencies};
 
         auto                              task = std::make_unique<TaskType>(
           m_taskCounter++,

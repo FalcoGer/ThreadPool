@@ -54,6 +54,14 @@ endif()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
+add_library(ConcurrentResource)
+target_sources(ConcurrentResource
+    PUBLIC
+      FILE_SET cxx_modules TYPE CXX_MODULES FILES
+        ConcurrentResource.cppm
+)
+set_target_properties(ConcurrentResource PROPERTIES CXX_SCAN_FOR_MODULES YES)
+
 add_library(ThreadPoolModule)
 target_sources(ThreadPoolModule
     PUBLIC
@@ -69,6 +77,8 @@ target_sources(ThreadPoolModule
         ThreadPool.cppm
 )
 set_target_properties(ThreadPoolModule PROPERTIES CXX_SCAN_FOR_MODULES YES)
+target_link_libraries(ThreadPoolModule PUBLIC ConcurrentResource)
+
 
 add_executable(ThreadPoolExample main.cpp)
 target_link_libraries(ThreadPoolExample PRIVATE ThreadPoolModule)

@@ -19,6 +19,8 @@ module;
 
 export module ThreadPool;
 
+import ConcurrentResource;
+
 export import :ETaskState;
 export import :TaskCanceled;
 export import :TaskID;
@@ -60,7 +62,7 @@ class ThreadPool
     void shutdownAndWait() noexcept
     {
         {
-            const std::lock_guard<std::mutex> LOCK(m_queueMutex);
+            const std::lock_guard _(m_taskQueue);
             for (auto& thread : m_threads)
             {
                 thread.request_stop();
@@ -118,7 +120,6 @@ class ThreadPool
     [[nodiscard]]
     auto threadCount() const noexcept -> std::size_t
     {
-        const std::lock_guard LOCK(m_queueMutex);
         return m_threads.size();
     }
 
@@ -214,9 +215,7 @@ class ThreadPool
         // fulfilled this is done in the new task's constructor
         // locks are kept until the task is in either the task queue or the tasks with dependencies queue
         // or canceled.
-        std::lock(m_queueMutex, m_tasksWithDependenciesMutex);
-        const std::lock_guard<std::mutex> TASK_QUEUE_LOCK(m_queueMutex, std::adopt_lock);
-        const std::lock_guard<std::mutex> DEPENDENCIES_QUEUE_LOCK(m_tasksWithDependenciesMutex, std::adopt_lock);
+        const std::scoped_lock LOCK{m_taskQueue, m_tasksWithDependencies};
 
         auto                              task = std::make_unique<TaskType>(
           m_taskCounter++,
@@ -236,12 +235,12 @@ class ThreadPool
 
         if (!task->hasDependencies())
         {
-            m_taskQueue.push(std::move(task));
+            m_taskQueue->push(std::move(task));
             m_cvTaskReady.notify_one();
         }
         else
         {
-            m_tasksWithDependencies.push_back(std::move(task));
+            m_tasksWithDependencies->push_back(std::move(task));
         }
         return ticket;
     }
@@ -266,8 +265,8 @@ class ThreadPool
             // task gets destroyed after running when this unique_ptr goes out of scope.
             ITaskPtrType task;
             {
-                std::unique_lock<std::mutex> lock(m_queueMutex);
-                m_cvTaskReady.wait(lock, [this, &stop] { return !m_taskQueue.empty() || stop.stop_requested(); });
+                std::unique_lock lock(m_taskQueue);
+                m_cvTaskReady.wait(lock, [this, &stop] { return !(m_taskQueue->empty()) || stop.stop_requested(); });
                 if (stop.stop_requested())
                 {
                     break;
@@ -278,8 +277,8 @@ class ThreadPool
                 // but we need to move from the top of the queue since ITaskPtrType is non copyable
                 // This leaves a nullptr in the priority queue, which we pop immediately.
                 // Since the queue is locked through the mutex, this should be safe.
-                task = std::move(const_cast<ITaskPtrType&>(m_taskQueue.top()));
-                m_taskQueue.pop();
+                task = std::move(const_cast<ITaskPtrType&>(m_taskQueue->top()));
+                m_taskQueue->pop();
             }
             if (task->getState() == ETaskState::PENDING)
             {
@@ -299,7 +298,7 @@ class ThreadPool
     {
         bool                              anyDependentTaskNeedsToBeRemoved {false};
 
-        const std::lock_guard<std::mutex> DEPENDENCY_LOCK {m_tasksWithDependenciesMutex};
+        const std::lock_guard _{m_tasksWithDependencies};
         // stack is used to recursively cancel tasks
         if (task->getState() == ETaskState::CANCELED || task->getState() == ETaskState::FAILED)
         {
@@ -313,7 +312,7 @@ class ThreadPool
         if (anyDependentTaskNeedsToBeRemoved)
         {
             std::erase_if(
-              m_tasksWithDependencies,
+              *m_tasksWithDependencies,
               [](const auto& taskWithDependencies)
               {
                   // clean up the nullptr we left when moving to the task queue.
@@ -334,7 +333,7 @@ class ThreadPool
     auto updateDependentTasksQueueForFinishedTask(const ITaskPtrType& task) -> bool
     {
         bool result {false};
-        for (auto& taskWithDependencies : m_tasksWithDependencies)
+        for (auto& taskWithDependencies : *m_tasksWithDependencies)
         {
             if (taskWithDependencies->getState() == ETaskState::CANCELED
                 || taskWithDependencies->getState() == ETaskState::FAILED
@@ -353,9 +352,9 @@ class ThreadPool
                 result = true;
                 // task dependencies were all fulfilled without having been canceled
                 {
-                    const std::lock_guard<std::mutex> LOCK(m_queueMutex);
+                    const std::lock_guard _(m_taskQueue);
                     // the move leaves nullptr in m_tasksWithDependencies, will be cleaned up later
-                    m_taskQueue.push(std::move(taskWithDependencies));
+                    m_taskQueue->push(std::move(taskWithDependencies));
                 }
                 m_cvTaskReady.notify_one();
             }
@@ -379,7 +378,7 @@ class ThreadPool
             TaskID canceledTask = std::move(canceledTasks.top());
             canceledTasks.pop();
 
-            for (auto& taskWithDependencies : m_tasksWithDependencies)
+            for (auto& taskWithDependencies : *m_tasksWithDependencies)
             {
                 if (taskWithDependencies->updateDependency(canceledTask))
                 {
@@ -392,12 +391,10 @@ class ThreadPool
         return result;
     }
 
-    std::priority_queue<ITaskPtrType, std::vector<ITaskPtrType>, ITaskPtrTypeComparator> m_taskQueue;
-    std::vector<ITaskPtrType>                                                            m_tasksWithDependencies;
-    std::vector<std::jthread>                                                            m_threads;
-    std::mutex                                                                           m_queueMutex;
-    std::mutex                                                                           m_tasksWithDependenciesMutex;
-    std::condition_variable                                                              m_cvTaskReady;
-    std::uint32_t                                                                        m_taskCounter {};
+    ConcurrentResource<std::priority_queue<ITaskPtrType, std::vector<ITaskPtrType>, ITaskPtrTypeComparator>, std::mutex> m_taskQueue;
+    ConcurrentResource<std::vector<ITaskPtrType>> m_tasksWithDependencies;
+    std::vector<std::jthread>                     m_threads;
+    std::condition_variable_any                   m_cvTaskReady;
+    std::uint32_t                                 m_taskCounter {};
 };
 }    // namespace ThreadPool

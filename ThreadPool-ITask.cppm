@@ -36,7 +36,6 @@ class ITask : protected TaskID
     TaskPriority                      m_priority;
     std::set<TaskID>                  m_dependencies;
     mutable std::mutex                m_dependenciesMutex;
-    std::optional<std::exception_ptr> m_exception;
 
     static constexpr const char* REASON_FMT {"Task {0} canceled, because task {1}, which task {0} depends on, {2}."};
 
@@ -52,13 +51,11 @@ class ITask : protected TaskID
     /// @brief Set the exception associated with the task.
     ///
     /// This method sets the exception associated with the task and stores it in the promise object.
-    /// The exception is also stored in the @ref m_exception member variable.
     ///
     /// @param exception A pointer to the exception to be associated with the task.
     void setException(std::exception_ptr&& exception)
     {
         m_promise.set_exception(exception);
-        m_exception = std::move(exception);
     }
 
     /// @brief Constructor for ITask.
@@ -98,7 +95,6 @@ class ITask : protected TaskID
     /// @brief Set the task as canceled and store the given exception.
     ///
     /// This method sets the task's state to CANCELED and stores the given exception in the promise object.
-    /// The exception is also stored in the @ref m_exception member variable.
     void setCanceled(std::exception_ptr&& exception)
     {
         TaskID::setCanceled();
@@ -108,7 +104,6 @@ class ITask : protected TaskID
     /// @brief Set the task as failed and store the given exception.
     ///
     /// This method sets the task's state to FAILED and stores the given exception in the promise object.
-    /// The exception is also stored in the @ref m_exception member variable.
     ///
     /// @param exception A pointer to the exception to be associated with the task.
     void setFailed(std::exception_ptr&& exception)
@@ -262,20 +257,6 @@ class ITask : protected TaskID
     auto getTaskID() const noexcept -> TaskID
     {
         return TaskID(*this);    // make a copy
-    }
-
-    /// @brief Get the exception associated with the task, if any.
-    ///
-    /// This method returns the exception associated with the task, if any.
-    /// If the task has not been canceled or failed, this method returns an empty optional.
-    /// A copy of the stored exception is returned.
-    /// @returns The exception associated with the task, if any.
-    ///
-    /// @note This function does not throw and is marked with @c noexcept
-    [[nodiscard]]
-    auto getException() const noexcept -> std::optional<std::exception_ptr>
-    {
-        return m_exception;
     }
 
     /// @brief Get the priority associated with the task.

@@ -85,8 +85,8 @@ set(SRC main.cpp)
 function(add_sanitized_target name)
     add_executable(${name} ${SRC})
     target_link_libraries(${name} PRIVATE ThreadPoolModule)
-    target_compile_options(${name} PRIVATE -g ${ARGN})
-    target_link_options(${name} PRIVATE -g ${ARGN})
+    target_compile_options(${name} PRIVATE -g -fno-omit-frame-pointer ${ARGN})
+    target_link_options(${name} PRIVATE -g -fno-omit-frame-pointer ${ARGN})
 endfunction()
 
 # ASan + UBSan
@@ -96,7 +96,7 @@ add_sanitized_target(sanitize_asan "-fsanitize=address,undefined")
 add_sanitized_target(sanitize_tsan "-fsanitize=thread")
 
 # MSan only
-add_sanitized_target(sanitize_msan "-fno-omit-frame-pointer" "-fsanitize=memory")
+add_sanitized_target(sanitize_msan "-fsanitize=memory")
 
 add_executable(ThreadPoolExample ${SRC})
 target_link_libraries(ThreadPoolExample PRIVATE ThreadPoolModule)

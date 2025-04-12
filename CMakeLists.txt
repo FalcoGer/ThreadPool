@@ -79,6 +79,24 @@ target_sources(ThreadPoolModule
 set_target_properties(ThreadPoolModule PROPERTIES CXX_SCAN_FOR_MODULES YES)
 target_link_libraries(ThreadPoolModule PUBLIC ConcurrentResource)
 
+set(SRC main.cpp)
 
-add_executable(ThreadPoolExample main.cpp)
+# Function to create a target with specific sanitizer flags
+function(add_sanitized_target name)
+    add_executable(${name} ${SRC})
+    target_link_libraries(${name} PRIVATE ThreadPoolModule)
+    target_compile_options(${name} PRIVATE -g ${ARGN})
+    target_link_options(${name} PRIVATE -g ${ARGN})
+endfunction()
+
+# ASan + UBSan
+add_sanitized_target(sanitize_asan "-fsanitize=address,undefined")
+
+# TSan only
+add_sanitized_target(sanitize_tsan "-fsanitize=thread")
+
+# MSan only
+add_sanitized_target(sanitize_msan "-fno-omit-frame-pointer" "-fsanitize=memory")
+
+add_executable(ThreadPoolExample ${SRC})
 target_link_libraries(ThreadPoolExample PRIVATE ThreadPoolModule)

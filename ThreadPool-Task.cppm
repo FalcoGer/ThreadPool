@@ -127,7 +127,8 @@ class Task : public ITask<PromiseType>
                 // ReturnType of task is not void
                 if constexpr (std::is_void_v<PromiseType>)
                 {
-                    // we have a return, but promise type is void, so we just set completed
+                    // we have a return, but promise type is void, so we just set completed. but still execute the task.
+                    std::apply(m_function, std::move(m_args));
                     this->getPromise().set_value();
                 }
                 else

@@ -333,6 +333,17 @@ auto main() -> int
             std::println("Exception caught: {}", ex.what());
         }
     }
+    {
+        ThreadPool<void> tp;
+        auto             ticket = tp.enqueue(
+          []
+          {
+              std::println("side effect in task returning a value in a void promise type thread pool");
+              return 0;
+          }
+        );
+        ticket.get();
+    }
     // NOLINTEND (readability-magic-numbers)
     return 0;
 }
